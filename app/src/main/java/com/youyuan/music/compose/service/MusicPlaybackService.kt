@@ -2,7 +2,9 @@ package com.youyuan.music.compose.service
 
 import android.app.PendingIntent
 import android.net.Uri
+import android.os.Bundle
 import androidx.annotation.OptIn
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
@@ -14,24 +16,32 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.youyuan.music.compose.BuildConfig
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.SongUrlApi
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
+@UnstableApi
 @AndroidEntryPoint
 class MusicPlaybackService : MediaLibraryService() {
 
@@ -55,6 +65,14 @@ class MusicPlaybackService : MediaLibraryService() {
 
     private var mediaLibrarySession: MediaLibrarySession? = null
     private var player: ExoPlayer? = null
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val closeCommandButton: CommandButton = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
+        .setDisplayName("Close")
+        .setCustomIconResId(R.drawable.ic_close_24px)
+        .setSessionCommand(SessionCommand(CUSTOM_COMMAND_CLOSE, Bundle.EMPTY))
+        .build()
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -133,6 +151,7 @@ class MusicPlaybackService : MediaLibraryService() {
             mediaLibrarySession = MediaLibrarySession.Builder(this, wrapperPlayer,
                 LibrarySessionCallback()
             )
+                .setCustomLayout(listOf(closeCommandButton))
                 .setSessionActivity(sessionActivityPendingIntent!!)
                 .build()
 
@@ -160,18 +179,44 @@ class MusicPlaybackService : MediaLibraryService() {
         super.onDestroy()
     }
 
-    private class LibrarySessionCallback : MediaLibrarySession.Callback {
+    private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo
         ): MediaSession.ConnectionResult {
             val connectionResult = super.onConnect(session, controller)
             val availableSessionCommands = connectionResult.availableSessionCommands.buildUpon()
+                .add(SessionCommand(CUSTOM_COMMAND_CLOSE, Bundle.EMPTY))
                 .build()
             return MediaSession.ConnectionResult.accept(
                 availableSessionCommands,
                 connectionResult.availablePlayerCommands
             )
+        }
+
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle
+        ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction == CUSTOM_COMMAND_CLOSE) {
+                // 通知 Activity 退出
+                val exitIntent = android.content.Intent(ACTION_EXIT_APP)
+                LocalBroadcastManager.getInstance(this@MusicPlaybackService)
+                    .sendBroadcast(exitIntent)
+
+                // 停止播放并停止服务
+                player?.stop()
+                player?.clearMediaItems()
+                serviceScope.launch {
+                    delay(300)
+                    stopSelf()
+                }
+
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            return super.onCustomCommand(session, controller, customCommand, args)
         }
     }
 
