@@ -10,6 +10,7 @@ import androidx.media3.common.util.UnstableApi
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.AlbumApi
+import com.youyuan.music.compose.api.apis.CommentApi
 import com.youyuan.music.compose.api.apis.LyricsApi
 import com.youyuan.music.compose.api.apis.SongApi
 import com.youyuan.music.compose.api.apis.SongUrlApi
@@ -67,6 +68,7 @@ class PlayerViewModel @Inject constructor(
     private val albumApi: AlbumApi = apiClient.createService(AlbumApi::class.java)
     private val songApi: SongApi = apiClient.createService(SongApi::class.java)
     private val lyricsApi: LyricsApi = apiClient.createService(LyricsApi::class.java)
+    private val commentApi: CommentApi = apiClient.createService(CommentApi::class.java)
 
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
@@ -79,6 +81,9 @@ class PlayerViewModel @Inject constructor(
 
     private val _currentAlbumArtUrl = MutableStateFlow<String?>(null)
     val currentAlbumArtUrl: StateFlow<String?> = _currentAlbumArtUrl.asStateFlow()
+
+    private val _commentCount = MutableStateFlow(0)
+    val commentCount: StateFlow<Int> = _commentCount.asStateFlow()
 
     private val _currentArtists = MutableStateFlow<List<Artist>>(emptyList())
     val currentArtists: StateFlow<List<Artist>> = _currentArtists.asStateFlow()
@@ -152,6 +157,9 @@ class PlayerViewModel @Inject constructor(
 
     private var positionUpdateJob: Job? = null
     private var buildLikedPlaylistJob: Job? = null
+    private var commentCountJob: Job? = null
+
+    private val commentCountCache = ConcurrentHashMap<Long, Int>()
 
     // 触发风控(-462)后，短时间暂停所有后台补齐/请求，避免继续把风控刷得更严重
     @Volatile
@@ -190,6 +198,46 @@ class PlayerViewModel @Inject constructor(
 
     private fun throwIfRiskCode(code: Long?, message: String? = null) {
         if (code == -462L) throw RiskControlException(message ?: "检测到您的网络环境存在风险，请稍后再试")
+    }
+
+    fun clearCommentCount() {
+        _commentCount.value = 0
+    }
+
+    /**
+     * 获取歌曲评论数量（取 /comment/music 的 total 字段）。
+     * 注意：此方法本身不限制调用时机；由 UI 在“播放器展开且切歌”时触发。
+     */
+    fun refreshCommentCount(songId: Long, force: Boolean = false) {
+        if (!force) {
+            val cached = commentCountCache[songId]
+            if (cached != null) {
+                _commentCount.value = cached
+                return
+            }
+        }
+
+        if (isRiskBlocked()) return
+
+        commentCountJob?.cancel()
+        commentCountJob = viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val response = commentApi.getMusicComments(songId = songId, limit = 1, offset = 0)
+                throwIfRiskCode(response.code)
+                if (response.code != 200) return@launch
+
+                val total = (response.total ?: 0).coerceAtLeast(0)
+                commentCountCache[songId] = total
+                _commentCount.value = total
+            } catch (e: Exception) {
+                if (e is RiskControlException) {
+                    enterRiskBlocked(e.message)
+                    return@launch
+                }
+                throwIfRisk(e)
+                Logger.err(TAG, "获取评论数量失败: ${e.message}")
+            }
+        }
     }
     
     init {

@@ -30,7 +30,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -65,6 +64,7 @@ import com.youyuan.music.compose.ui.uicomponent.sheet.MusicFXSheetDialog
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.utils.PlayerForegroundColorLight
 import com.youyuan.music.compose.ui.utils.getPlayerUIColor
+import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.utils.Logger
 import com.youyuan.music.compose.utils.SystemMediaDialogUtils
@@ -102,6 +102,7 @@ fun BottomSheetPlayer(
 
     // 当前Song对象
     val currentSong = playerViewModel.currentSong.collectAsState().value
+    val currentSongId = currentSong?.id
     // 封面
     val currentArtworkUrl = playerViewModel.currentAlbumArtUrl.collectAsState().value
     // 标题
@@ -167,9 +168,14 @@ fun BottomSheetPlayer(
         mutableStateOf<Long?>(null)
     }
 
-    // 评论数量小数字
-    var commentCount by remember {
-        mutableIntStateOf(9)
+    // 评论数量小数字（展开态切歌时拉取）
+    val commentCount = playerViewModel.commentCount.collectAsState().value
+
+    LaunchedEffect(state.isExpanded, currentSongId) {
+        if (currentSongId != null) {
+            playerViewModel.clearCommentCount()
+            playerViewModel.refreshCommentCount(currentSongId)
+        }
     }
 
     // 状态栏颜色控制和全局前景色控制
@@ -416,7 +422,12 @@ fun BottomSheetPlayer(
                                                 // 评论按钮
                                                 Box {
                                                     IconButton(
-                                                        onClick = {},
+                                                        onClick = {
+                                                            val songId = currentSongId
+                                                            if (songId != null) {
+                                                                navController.navigate(ScreenRoute.SongComments.createRoute(songId))
+                                                            }
+                                                        },
                                                         modifier = Modifier.padding(4.dp)
                                                     ) {
                                                         Icon(

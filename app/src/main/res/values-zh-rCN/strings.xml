@@ -86,4 +86,13 @@
     <string name="confirm">好</string>
     <string name="cancel">取消</string>
 
+    <!-- Comments -->
+    <string name="comments_title">所有评论</string>
+    <string name="comments_hot">精彩评论</string>
+    <string name="comments_latest">最新评论</string>
+    <string name="comments_load_more">加载更多</string>
+    <string name="comments_no_more">没有更多了</string>
+    <string name="comments_refresh">刷新</string>
+    <string name="comments_ip_location_format">IP属地：%1$s</string>
+
 </resources>
