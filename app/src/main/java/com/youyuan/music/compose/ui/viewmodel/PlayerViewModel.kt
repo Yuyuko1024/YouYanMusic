@@ -324,7 +324,7 @@ class PlayerViewModel @Inject constructor(
     fun getDuration(): Long = playerController.getDuration()
     
     fun seekTo(positionMs: Long) = playerController.seekTo(positionMs)
-    
+
     fun togglePlayPause() = playerController.togglePlayPause()
     
     fun skipToNext() = playerController.skipToNext()
@@ -467,7 +467,7 @@ class PlayerViewModel @Inject constructor(
                 // 若已经存在，直接定位播放（避免并发下重复插入导致索引错乱）
                 val existingIndex = PlayerPlaylistManager.findSongIndex(songId)
                 if (existingIndex != -1) {
-                    playerController.playAtIndex(existingIndex)
+                    playerController.getPlayer()?.seekTo(existingIndex, 0L)
                     return@onPlayerThread
                 }
 
@@ -482,7 +482,7 @@ class PlayerViewModel @Inject constructor(
                 playerController.addMediaItems(desiredIndex, listOf(item.toMediaItemSafe()))
 
                 val playIndex = PlayerPlaylistManager.findSongIndex(songId).takeIf { it != -1 } ?: desiredIndex
-                playerController.playAtIndex(playIndex)
+                playerController.getPlayer()?.seekTo(playIndex, 0L)
             }
         }
     }
@@ -576,6 +576,9 @@ class PlayerViewModel @Inject constructor(
                     desiredIndex = insertIndex,
                     item = item,
                 )
+
+                // 占位 URI 会在 Service 的 DataSource 中解析为真实 URL
+                onPlayerThread { playerController.playAtIndex(insertIndex) }
             }
             return
         }
@@ -731,8 +734,8 @@ class PlayerViewModel @Inject constructor(
 
     /**
      * 从“我喜欢的音乐”的 ID 列表构建播放列表：
-     * - 先无感加载从目标歌曲开始的 [preloadCount] 首并立即播放（保证先能听 50 首）
-     * - 后台再按原顺序补齐其余所有歌曲（先插入目标之前的，再追加目标之后的）
+     * - 先构建“仅歌曲详情”的占位列表（不预取 URL）
+     * - 只有当播放切到某一项时，才为该项请求 URL 并替换 MediaItem
      */
     fun playTargetSongWithPlaylist(
         targetSongId: Long,
@@ -793,12 +796,11 @@ class PlayerViewModel @Inject constructor(
                 val windowEndExclusive = (targetIndex + afterCount + 1).coerceAtMost(allSongIds.size)
                 val windowIds = allSongIds.subList(windowStart, windowEndExclusive)
 
-                // 1) 目标歌曲优先：只要目标可播放就立刻开始（URL 缺失则失败）
-                val targetItem = buildPlaylistItemsByIds(listOf(targetSongId), urlConcurrency).firstOrNull()
-                if (targetItem == null) {
-                    _error.value = "无法获取歌曲播放链接"
-                    return@launch
-                }
+                // 1) 目标歌曲优先：先插入无 URL 的占位 Item，URL 在真正播放时再加载
+                val targetItem = buildPlaylistItemsByIds(listOf(targetSongId)).firstOrNull()
+                    ?: PlayerPlaylistManager.PlaylistItem(song = Song(id = targetSongId), playUrl = null, albumArtUrl = null)
+
+                // 占位 URI 会在 Service 的 DataSource 中解析为真实 URL
                 commitSetPlaylist(sessionId, listOf(targetItem), startIndex = 0, startPlay = true)
 
                 // 用户已开始播放，取消 Loading
@@ -814,7 +816,7 @@ class PlayerViewModel @Inject constructor(
                 for (chunk in windowAfterIds.chunked(fetchChunkSize)) {
                     ensureActive()
                     if (!isCurrentBuildSession(sessionId)) return@launch
-                    val items = buildPlaylistItemsByIds(chunk, urlConcurrency)
+                    val items = buildPlaylistItemsByIds(chunk)
                     commitAddItemsAppend(sessionId, items)
                 }
 
@@ -823,7 +825,7 @@ class PlayerViewModel @Inject constructor(
                 for (chunk in beforeChunks.asReversed()) {
                     ensureActive()
                     if (!isCurrentBuildSession(sessionId)) return@launch
-                    val items = buildPlaylistItemsByIds(chunk, urlConcurrency)
+                    val items = buildPlaylistItemsByIds(chunk)
                     commitAddItemsInsert(sessionId, 0, items)
                 }
 
@@ -838,7 +840,7 @@ class PlayerViewModel @Inject constructor(
                 for (chunk in remainingBeforeChunks.asReversed()) {
                     ensureActive()
                     if (!isCurrentBuildSession(sessionId)) return@launch
-                    val items = buildPlaylistItemsByIds(chunk, urlConcurrency)
+                    val items = buildPlaylistItemsByIds(chunk)
                     commitAddItemsInsert(sessionId, 0, items)
                 }
 
@@ -846,7 +848,7 @@ class PlayerViewModel @Inject constructor(
                 for (chunk in remainingAfterIds.chunked(bgFetchChunkSize)) {
                     ensureActive()
                     if (!isCurrentBuildSession(sessionId)) return@launch
-                    val items = buildPlaylistItemsByIds(chunk, urlConcurrency)
+                    val items = buildPlaylistItemsByIds(chunk)
                     commitAddItemsAppend(sessionId, items)
                 }
             } catch (e: Exception) {
@@ -864,7 +866,6 @@ class PlayerViewModel @Inject constructor(
 
     private suspend fun buildPlaylistItemsByIds(
         ids: List<Long>,
-        urlConcurrency: Int,
     ): List<PlayerPlaylistManager.PlaylistItem> {
         if (ids.isEmpty()) return emptyList()
 
@@ -879,7 +880,7 @@ class PlayerViewModel @Inject constructor(
             return pending.mapNotNull { _preparedItemCache[it] }
         }
 
-        // 1) 批量 song/detail
+        // 1) 批量 song/detail（不请求 URL；URL 在实际播放到该项时再加载）
         val detailsById: Map<Long, SongDetail> = try {
             val response = songApi.getSongDetails(missing.joinToString(","))
             throwIfRiskCode(response.code)
@@ -890,21 +891,15 @@ class PlayerViewModel @Inject constructor(
             emptyMap()
         }
 
-        // 2) 单曲 URL（限流并发）
-        val urlById: Map<Long, String?> = fetchSongUrlsLimited(missing, urlConcurrency)
-
-        // 3) 严格按 ids 顺序组装 Item，保证最终播放列表顺序正确
+        // 2) 严格按 ids 顺序组装 Item，保证最终播放列表顺序正确
         for (id in missing) {
-            val playUrl = urlById[id]
-            if (playUrl.isNullOrBlank()) continue
-
             val detail = detailsById[id]
             val song = detail?.toSong() ?: Song(id = id)
             val albumArtUrl = detail?.al?.picUrl
 
             val item = PlayerPlaylistManager.PlaylistItem(
                 song = song,
-                playUrl = playUrl,
+                playUrl = null,
                 albumArtUrl = albumArtUrl
             )
             song.id?.let { sid -> _preparedItemCache[sid] = item }
@@ -912,44 +907,6 @@ class PlayerViewModel @Inject constructor(
 
         // 严格按 pending 顺序返回（缓存 + 本次新填充）
         return pending.mapNotNull { _preparedItemCache[it] }
-    }
-
-    private suspend fun fetchSongUrlsLimited(
-        ids: List<Long>,
-        concurrency: Int,
-    ): Map<Long, String?> = coroutineScope {
-        // /song/url/v1 支持一次请求多个 id（逗号分隔），显著减少请求量，从而降低触发风控概率。
-        if (ids.isEmpty()) return@coroutineScope emptyMap()
-
-        val semaphore = Semaphore(concurrency.coerceAtLeast(1))
-        val chunkSize = 100
-
-        ids
-            .chunked(chunkSize)
-            .map { chunk ->
-                async(Dispatchers.IO) {
-                    semaphore.withPermit {
-                        try {
-                            val response = songUrlApi.getSongUrl(
-                                songIds = chunk.joinToString(","),
-                            )
-                            throwIfRiskCode(response.code)
-                            chunk.associateWith { id ->
-                                response.data?.firstOrNull { it.id == id }?.url
-                            }
-                        } catch (e: Exception) {
-                            if (e is RiskControlException) throw e
-                            throwIfRisk(e)
-                            chunk.associateWith { null }
-                        }
-                    }
-                }
-            }
-            .awaitAll()
-            .fold(mutableMapOf<Long, String?>()) { acc, map ->
-                acc.putAll(map)
-                acc
-            }
     }
 
     private sealed interface LoadResult {
@@ -1020,46 +977,26 @@ class PlayerViewModel @Inject constructor(
         if (_loadedSongIds.contains(songId)) return LoadResult.Skip
         _preparedItemCache[songId]?.let { return LoadResult.Item(it) }
 
-        return coroutineScope {
-            val detailDeferred = async(Dispatchers.IO) {
-                try {
-                    val r = songApi.getSongDetails(songId.toString())
-                    throwIfRiskCode(r.code)
-                    r.songs?.firstOrNull()
-                } catch (e: Exception) {
-                    if (e is RiskControlException) throw e
-                    throwIfRisk(e)
-                    null
-                }
-            }
-            val urlDeferred = async(Dispatchers.IO) {
-                try {
-                    val response = songUrlApi.getSongUrl(songIds = songId.toString())
-                    throwIfRiskCode(response.code)
-                    response.data?.firstOrNull()?.url
-                } catch (e: Exception) {
-                    if (e is RiskControlException) throw e
-                    throwIfRisk(e)
-                    null
-                }
-            }
-
-            val playUrl = urlDeferred.await()
-            if (playUrl.isNullOrBlank()) return@coroutineScope LoadResult.Skip
-
-            val detail = detailDeferred.await()
-            val song = detail?.toSong() ?: Song(id = songId)
-            val albumArtUrl = detail?.al?.picUrl
-
-            val item = PlayerPlaylistManager.PlaylistItem(
-                song = song,
-                playUrl = playUrl,
-                albumArtUrl = albumArtUrl
-            )
-            song.id?.let { sid -> _preparedItemCache[sid] = item }
-
-            LoadResult.Item(item)
+        val detail = try {
+            val r = songApi.getSongDetails(songId.toString())
+            throwIfRiskCode(r.code)
+            r.songs?.firstOrNull()
+        } catch (e: Exception) {
+            if (e is RiskControlException) throw e
+            throwIfRisk(e)
+            null
         }
+
+        val song = detail?.toSong() ?: Song(id = songId)
+        val albumArtUrl = detail?.al?.picUrl
+
+        val item = PlayerPlaylistManager.PlaylistItem(
+            song = song,
+            playUrl = null,
+            albumArtUrl = albumArtUrl,
+        )
+        song.id?.let { sid -> _preparedItemCache[sid] = item }
+        return LoadResult.Item(item)
     }
 
     private suspend fun getOrFetchPlaylistItem(songId: Long): PlayerPlaylistManager.PlaylistItem? {
