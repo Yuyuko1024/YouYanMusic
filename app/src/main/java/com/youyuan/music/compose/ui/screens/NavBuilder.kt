@@ -79,4 +79,18 @@ fun NavGraphBuilder.navigationBuilder(
 
     }
 
+    // 歌曲评论
+    composable(
+        route = ScreenRoute.SongComments.route,
+        arguments = listOf(
+            navArgument("songId") { type = NavType.LongType }
+        )
+    ) { backStackEntry ->
+        val songId = backStackEntry.arguments?.getLong("songId") ?: 0L
+        SongCommentScreen(
+            navController = navController,
+            songId = songId,
+        )
+    }
+
 }

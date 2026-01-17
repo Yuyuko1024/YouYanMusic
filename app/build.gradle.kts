@@ -138,6 +138,7 @@ dependencies {
     // Material
     implementation(libs.androidx.material)
     implementation(libs.androidx.material.icons)
+    implementation("androidx.compose.material:material")
 
     // Icons
     implementation(libs.composeIcons.simpleIcons)
