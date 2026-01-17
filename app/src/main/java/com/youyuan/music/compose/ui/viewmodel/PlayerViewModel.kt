@@ -643,6 +643,28 @@ class PlayerViewModel @Inject constructor(
         )
     }
 
+    /**
+     * 智能播放（通用列表版本）：
+     * - 如果当前就是同一个全量列表：优先 seek / 插入目标（避免重复提交全量 songIds 触发重建/转换）
+     * - 如果不是同一个列表：走完整构建逻辑（target-first + 后台补齐）
+     */
+    fun playTargetSongWithPlaylistSmart(
+        targetSongId: Long,
+        allSongIds: List<Long>,
+        preloadCount: Int = 50,
+        backgroundChunkSize: Int = 20,
+        urlConcurrency: Int = 6,
+    ) {
+        // 复用现有的“同 full playlist 则 seek/插入，否则重建”的实现
+        playLikedSongSmart(
+            targetSongId = targetSongId,
+            allSongIds = allSongIds,
+            preloadCount = preloadCount,
+            backgroundChunkSize = backgroundChunkSize,
+            urlConcurrency = urlConcurrency,
+        )
+    }
+
     fun clearPlaylist() {
         buildLikedPlaylistJob?.cancel()
         newBuildSessionId()
