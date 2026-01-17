@@ -14,6 +14,7 @@ import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.paging.SongIdsPagingSource
 import com.youyuan.music.compose.utils.toSong
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -38,8 +39,18 @@ class MyMusicViewModel @Inject constructor(
     // 缓存已加载的歌曲详情（用于快速访问）
     private val _loadedSongs = MutableStateFlow<Map<Long, SongDetail>>(emptyMap())
 
-    fun loadLikedSongs(uid: String) {
-        viewModelScope.launch {
+    private var likedSongsJob: Job? = null
+    private var likedUid: String? = null
+    private var likedLoadedOnce: Boolean = false
+
+    fun loadLikedSongs(uid: String, forceRefresh: Boolean = false) {
+        if (!forceRefresh && likedLoadedOnce && likedUid == uid) return
+
+        likedUid = uid
+        likedLoadedOnce = true
+
+        likedSongsJob?.cancel()
+        likedSongsJob = viewModelScope.launch {
             try {
                 // 1. 先获取所有 ID
                 val likeList = profileApi.getLikelistById(uid)
@@ -62,6 +73,8 @@ class MyMusicViewModel @Inject constructor(
                         .collect { pagingData ->
                             _songPagingFlow.value = pagingData
                         }
+                } else {
+                    _songPagingFlow.value = PagingData.empty()
                 }
             } catch (e: Exception) {
                 // Handle error
