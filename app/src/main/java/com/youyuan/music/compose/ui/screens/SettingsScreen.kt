@@ -7,22 +7,29 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import android.widget.Toast
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.ItemPopup
 import com.moriafly.salt.ui.ItemSwitcher
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.moriafly.salt.ui.dialog.InputDialog
 import com.moriafly.salt.ui.popup.PopupMenuItem
 import com.moriafly.salt.ui.popup.rememberPopupState
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
+import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import kotlinx.coroutines.launch
 
 @UnstableSaltUiApi
@@ -32,11 +39,17 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val appConfigViewModel: AppConfigViewModel = hiltViewModel()
+
     val settingsDataStore = remember { SettingsDataStore(context) }
     val isAppDynamicColorEnabled by settingsDataStore.appDynamicColorEnabled.collectAsState(initial = false)
     val isPlayerSquigglyWaveEnabled by settingsDataStore.isPlayerSquigglyWaveEnabled.collectAsState(initial = true)
     val playerCoverType by settingsDataStore.playerCoverType
         .collectAsState(initial = PlayerCoverType.DEFAULT.ordinal)
+
+    val effectiveApiUrl by appConfigViewModel.effectiveApiUrl.collectAsState()
+    var showApiDialog by remember { mutableStateOf(false) }
+    var apiUrlInput by remember { mutableStateOf(effectiveApiUrl) }
 
     val playerCoverTypeLabels = listOf(
         stringResource(R.string.settings_cover_square),
@@ -123,7 +136,52 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            ItemOuterTitle(text = stringResource(R.string.settings_network_title))
+            RoundedColumn {
+                Item(
+                    text = stringResource(R.string.settings_api_endpoint),
+                    sub = effectiveApiUrl.ifBlank { stringResource(R.string.settings_api_endpoint_unset) },
+                    onClick = {
+                        apiUrlInput = effectiveApiUrl
+                        showApiDialog = true
+                    }
+                )
+            }
         }
+    }
+
+    if (showApiDialog) {
+        InputDialog(
+            onDismissRequest = {
+                showApiDialog = false
+            },
+            onConfirm = {
+                coroutineScope.launch {
+                    try {
+                        appConfigViewModel.persistAndApplyApiUrl(apiUrlInput)
+                        showApiDialog = false
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.settings_api_endpoint_saved),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            context,
+                            e.message ?: context.getString(R.string.settings_api_endpoint_invalid),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            },
+            title = stringResource(R.string.settings_api_endpoint),
+            text = apiUrlInput,
+            onChange = { apiUrlInput = it },
+            hint = stringResource(R.string.settings_api_endpoint_hint),
+            cancelText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.confirm)
+        )
     }
 
 }

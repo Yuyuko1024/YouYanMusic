@@ -38,6 +38,15 @@ class SettingsDataStore(context: Context) {
             preferences[APP_API_URL] ?: AppConstants.APP_API_ENDPOINT
         }
 
+    /**
+     * 仅返回用户保存的 API URL；未设置时返回空字符串。
+     * 用于“首次安装需要强制用户填写”的判定。
+     */
+    val savedAppApiUrl: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[APP_API_URL]?.trim().orEmpty()
+        }
+
     // 用户界面的设置
     val appDynamicColorEnabled: Flow<Boolean> = dataStore.data
         .map { preferences ->

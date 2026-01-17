@@ -52,6 +52,17 @@
     <string name="settings_action_previous">Previous Track</string>
     <string name="settings_action_restart">Restart</string>
 
+    <!-- Network / API -->
+    <string name="settings_network_title">Network</string>
+    <string name="settings_api_endpoint">API Endpoint</string>
+    <string name="settings_api_endpoint_hint">Example: http://192.168.1.2:3000</string>
+    <string name="settings_api_endpoint_unset">Not set</string>
+    <string name="settings_api_endpoint_saved">Saved</string>
+    <string name="settings_api_endpoint_invalid">Invalid API endpoint</string>
+    <string name="settings_api_endpoint_required_title">API Endpoint Required</string>
+    <string name="settings_api_endpoint_required_text">Please enter the API server address to continue.</string>
+    <string name="exit_app">Exit App</string>
+
     <!-- Account -->
     <string name="not_logged_in_account">Not logged in</string>
     <string name="click_to_login">Click to login</string>

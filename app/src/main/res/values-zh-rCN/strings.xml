@@ -52,6 +52,17 @@
     <string name="settings_action_previous">上一首</string>
     <string name="settings_action_restart">回到开始</string>
 
+    <!-- Network / API -->
+    <string name="settings_network_title">网络</string>
+    <string name="settings_api_endpoint">API 地址</string>
+    <string name="settings_api_endpoint_hint">示例：http://192.168.1.2:3000</string>
+    <string name="settings_api_endpoint_unset">未设置</string>
+    <string name="settings_api_endpoint_saved">已保存</string>
+    <string name="settings_api_endpoint_invalid">API 地址无效</string>
+    <string name="settings_api_endpoint_required_title">需要先设置 API 地址</string>
+    <string name="settings_api_endpoint_required_text">请先输入 API 服务端地址后再继续使用。</string>
+    <string name="exit_app">退出应用</string>
+
     <!-- Account -->
     <string name="not_logged_in_account">未登录</string>
     <string name="click_to_login">点击登录</string>
