@@ -1,0 +1,78 @@
+<resources>
+    <string name="app_name">有言音乐</string>
+    <string name="back_btn">返回</string>
+
+    <!-- page title -->
+    <string name="title_explore">探索</string>
+    <string name="title_profile">我的</string>
+    <string name="title_login">登录</string>
+    <string name="title_register">注册</string>
+    <string name="title_my_liked">我喜欢的音乐</string>
+
+    <!-- Drawer menu -->
+    <string name="drawer_home">主页</string>
+    <string name="drawer_settings">设置</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_drawer">侧边抽屉按钮</string>
+    <string name="cd_search">搜索按钮</string>
+    <string name="cd_clear_search">清除搜索内容</string>
+    <string name="cd_no_search_results">无搜索结果</string>
+
+    <!-- Search -->
+    <string name="search_hint_topbar">在此处输入搜索内容</string>
+    <string name="search_hint">输入关键词以搜索</string>
+    <string name="search_suggestions">搜索建议</string>
+    <string name="search_description">在网易云音乐曲库中搜索内容</string>
+    <string name="no_search_results">未找到内容</string>
+    <string name="try_different_keywords">试试其他关键词</string>
+    <string name="searching">正在搜索…</string>
+    <string name="match_label">匹配</string>
+
+    <!-- Player -->
+    <string name="collapse_player_hint">下滑或点击此处以返回播放页面</string>
+    <string name="playlist_title">播放列表</string>
+    <string name="clear_playlist">清空播放列表</string>
+    <string name="clear_playlist_confirm">要清空当前播放列表吗？</string>
+    <string name="empty_playlist">无内容</string>
+    <string name="empty_playlist_description">添加歌曲到播放列表以播放</string>
+    <string name="no_lyrics">无歌词</string>
+    <string name="enjoy_pure_music">享受纯音乐的美好时光</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_ui_title">用户界面</string>
+    <string name="settings_dynamic_color">动态颜色主题 (Android 12+)</string>
+    <string name="settings_player_wave">播放进度条波形动画</string>
+    <string name="settings_player_cover_type">播放器封面类型</string>
+    <string name="settings_cover_square">方形封面</string>
+    <string name="settings_cover_circle">圆形封面</string>
+    <string name="settings_player_behavior">播放器行为</string>
+    <string name="settings_seek_previous_action">上一曲按钮行为</string>
+    <string name="settings_action_default">默认行为</string>
+    <string name="settings_action_previous">上一首</string>
+    <string name="settings_action_restart">回到开始</string>
+
+    <!-- Account -->
+    <string name="not_logged_in_account">未登录</string>
+    <string name="click_to_login">点击登录</string>
+
+    <!-- Bio -->
+    <string name="bio_label">个性标签</string>
+    <string name="bio_empty">这个人很懒，什么都没留下</string>
+
+    <!-- Music FX -->
+    <string name="music_effects">音乐效果</string>
+    <string name="system_equalizer">系统均衡器</string>
+    <string name="equalizer_not_found">未找到系统均衡器</string>
+    <string name="speed_and_pitch">速度和音高调整</string>
+    <string name="playback_speed">播放速度</string>
+    <string name="pitch_adjustment">音高调整</string>
+
+    <!-- Common -->
+    <string name="unknown_song">未知歌曲</string>
+    <string name="unknown_artist">未知艺术家</string>
+    <string name="unknown_album">未知专辑</string>
+    <string name="confirm">好</string>
+    <string name="cancel">取消</string>
+
+</resources>

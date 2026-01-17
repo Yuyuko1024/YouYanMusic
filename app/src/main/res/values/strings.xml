@@ -1,0 +1,78 @@
+<resources>
+    <string name="app_name">YouYanMusic</string>
+    <string name="back_btn">Back</string>
+
+    <!-- page title -->
+    <string name="title_explore">Explore</string>
+    <string name="title_profile">Profile</string>
+    <string name="title_login">Login</string>
+    <string name="title_register">Register</string>
+    <string name="title_my_liked">My liked music</string>
+
+    <!-- Drawer menu -->
+    <string name="drawer_home">Home</string>
+    <string name="drawer_settings">Settings</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_drawer">Drawer</string>
+    <string name="cd_search">Search</string>
+    <string name="cd_clear_search">Clear search</string>
+    <string name="cd_no_search_results">No search results</string>
+
+    <!-- Search -->
+    <string name="search_hint_topbar">Type keywords to search here</string>
+    <string name="search_hint">Type keywords to search</string>
+    <string name="search_suggestions">Search suggestions</string>
+    <string name="search_description">Search any content on NetEase Cloud Music</string>
+    <string name="no_search_results">No results found</string>
+    <string name="try_different_keywords">Try using different keywords</string>
+    <string name="searching">Searching…</string>
+    <string name="match_label">Match</string>
+
+    <!-- Player -->
+    <string name="collapse_player_hint">Swipe down or tap here to return to play page</string>
+    <string name="playlist_title">Playlist</string>
+    <string name="clear_playlist">Clear Playlist</string>
+    <string name="clear_playlist_confirm">Clear the current playlist?</string>
+    <string name="empty_playlist">No music</string>
+    <string name="empty_playlist_description">Add media files to playlist</string>
+    <string name="no_lyrics">No lyrics</string>
+    <string name="enjoy_pure_music">Enjoy the wonderful time of pure music</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_ui_title">User Interface</string>
+    <string name="settings_dynamic_color">Dynamic Color Theme (Android 12+)</string>
+    <string name="settings_player_wave">Progress bar wave animation</string>
+    <string name="settings_player_cover_type">Player Cover Type</string>
+    <string name="settings_cover_square">Square Cover</string>
+    <string name="settings_cover_circle">Circle Cover</string>
+    <string name="settings_player_behavior">Player Behavior</string>
+    <string name="settings_seek_previous_action">Previous Track Action</string>
+    <string name="settings_action_default">Default</string>
+    <string name="settings_action_previous">Previous Track</string>
+    <string name="settings_action_restart">Restart</string>
+
+    <!-- Account -->
+    <string name="not_logged_in_account">Not logged in</string>
+    <string name="click_to_login">Click to login</string>
+
+    <!-- Bio -->
+    <string name="bio_label">Bio</string>
+    <string name="bio_empty">This person is lazy and left nothing</string>
+
+    <!-- Music FX -->
+    <string name="music_effects">Music Effects</string>
+    <string name="system_equalizer">System Equalizer</string>
+    <string name="equalizer_not_found">System equalizer app not detected</string>
+    <string name="speed_and_pitch">Speed and Pitch Adjustment</string>
+    <string name="playback_speed">Playback Speed</string>
+    <string name="pitch_adjustment">Pitch Adjustment</string>
+
+    <!-- Common -->
+    <string name="unknown_song">Unknown Song</string>
+    <string name="unknown_artist">Unknown Artist</string>
+    <string name="unknown_album">Unknown Album</string>
+    <string name="confirm">OK</string>
+    <string name="cancel">Cancel</string>
+
+</resources>
