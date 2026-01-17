@@ -79,6 +79,8 @@ fun LikedSongScreen(
                 SongItem(
                     song = song,
                     onClick = {
+                        // 把当前已加载的列表项写入对象池，供播放器复用/补全后反哺列表
+                        myMusicViewModel.putSongDetailsToPool(lazyPagingItems.itemSnapshotList.items)
                         val allIds = myMusicViewModel.allSongIds.value
                         playerViewModel.playLikedSongSmart(song.id, allIds)
                     }

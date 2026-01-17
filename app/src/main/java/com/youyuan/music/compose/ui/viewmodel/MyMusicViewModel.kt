@@ -11,6 +11,7 @@ import com.youyuan.music.compose.api.apis.ProfileApi
 import com.youyuan.music.compose.api.apis.SongApi
 import com.youyuan.music.compose.api.model.Song
 import com.youyuan.music.compose.api.model.SongDetail
+import com.youyuan.music.compose.data.SongDetailPool
 import com.youyuan.music.compose.paging.SongIdsPagingSource
 import com.youyuan.music.compose.utils.toSong
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +23,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MyMusicViewModel @Inject constructor(
-    private val apiClient: ApiClient
+    private val apiClient: ApiClient,
+    private val songDetailPool: SongDetailPool,
 ) : ViewModel() {
 
     private val songApi = apiClient.createService(SongApi::class.java)
@@ -36,12 +38,13 @@ class MyMusicViewModel @Inject constructor(
     private val _allSongIds = MutableStateFlow<List<Long>>(emptyList())
     val allSongIds = _allSongIds.asStateFlow()
 
-    // 缓存已加载的歌曲详情（用于快速访问）
-    private val _loadedSongs = MutableStateFlow<Map<Long, SongDetail>>(emptyMap())
-
     private var likedSongsJob: Job? = null
     private var likedUid: String? = null
     private var likedLoadedOnce: Boolean = false
+
+    fun putSongDetailsToPool(details: List<SongDetail>) {
+        songDetailPool.putAll(details)
+    }
 
     fun loadLikedSongs(uid: String, forceRefresh: Boolean = false) {
         if (!forceRefresh && likedLoadedOnce && likedUid == uid) return
@@ -60,6 +63,13 @@ class MyMusicViewModel @Inject constructor(
                 _allSongIds.value = ids
 
                 if (ids.isNotEmpty()) {
+                    // 如果对象池已完整命中，则无需分页/网络请求，直接喂给列表
+                    val isFullyCached = ids.all { songDetailPool.contains(it) }
+                    if (isFullyCached) {
+                        _songPagingFlow.value = PagingData.from(songDetailPool.getOrdered(ids))
+                        return@launch
+                    }
+
                     // 2. 创建 Pager
                     Pager(
                         config = PagingConfig(
@@ -67,7 +77,7 @@ class MyMusicViewModel @Inject constructor(
                             enablePlaceholders = true, // 启用占位符！
                             initialLoadSize = 20 // 初始加载数量
                         ),
-                        pagingSourceFactory = { SongIdsPagingSource(ids, songApi) }
+                        pagingSourceFactory = { SongIdsPagingSource(ids, songApi, songDetailPool) }
                     ).flow
                         .cachedIn(viewModelScope)
                         .collect { pagingData ->
@@ -91,18 +101,15 @@ class MyMusicViewModel @Inject constructor(
         if (songIds.isEmpty()) return emptyList()
 
         return try {
-            val idsString = songIds.joinToString(",")
-            val response = songApi.getSongDetails(idsString)
-            val songDetails = response.songs ?: emptyList()
-
-            // 缓存加载的歌曲
-            val newCache = _loadedSongs.value.toMutableMap()
-            songDetails.forEach { detail ->
-                newCache[detail.id] = detail
+            val missing = songIds.filterNot { songDetailPool.contains(it) }
+            if (missing.isNotEmpty()) {
+                val response = songApi.getSongDetails(missing.joinToString(","))
+                val songDetails = response.songs ?: emptyList()
+                songDetailPool.putAll(songDetails)
             }
-            _loadedSongs.value = newCache
 
-            songDetails.map { it.toSong() }
+            // 保证按 songIds 顺序返回
+            songIds.mapNotNull { songDetailPool.get(it)?.toSong() }
         } catch (e: Exception) {
             emptyList()
         }
@@ -112,6 +119,6 @@ class MyMusicViewModel @Inject constructor(
      * 获取已缓存的歌曲（如果存在）
      */
     fun getCachedSong(songId: Long): Song? {
-        return _loadedSongs.value[songId]?.toSong()
+        return songDetailPool.get(songId)?.toSong()
     }
 }

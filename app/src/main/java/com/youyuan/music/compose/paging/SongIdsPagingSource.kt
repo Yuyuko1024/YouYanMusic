@@ -4,11 +4,13 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.youyuan.music.compose.api.apis.SongApi
 import com.youyuan.music.compose.api.model.SongDetail
+import com.youyuan.music.compose.data.SongDetailPool
 import kotlin.math.min
 
 class SongIdsPagingSource(
     private val songIds: List<Long>,
-    private val songApi: SongApi
+    private val songApi: SongApi,
+    private val songDetailPool: SongDetailPool,
 ) : PagingSource<Int, SongDetail>() {
 
     override fun getRefreshKey(state: PagingState<Int, SongDetail>): Int? {
@@ -38,10 +40,16 @@ class SongIdsPagingSource(
         val idsToLoad = songIds.subList(key, end)
 
         return try {
-            // 将 ID 列表转换为逗号分隔的字符串
-            val idsString = idsToLoad.joinToString(",")
-            val response = songApi.getSongDetails(idsString)
-            val songs = response.songs ?: emptyList()
+            // 先从对象池命中，缺失的再走网络
+            val missingIds = idsToLoad.filterNot { songDetailPool.contains(it) }
+            if (missingIds.isNotEmpty()) {
+                val response = songApi.getSongDetails(missingIds.joinToString(","))
+                val songs = response.songs ?: emptyList()
+                songDetailPool.putAll(songs)
+            }
+
+            // 严格按 idsToLoad 顺序输出
+            val songs = idsToLoad.mapNotNull { songDetailPool.get(it) }
 
             // 计算下一页的 key (即下一个起始索引)
             val nextKey = if (end < songIds.size) end else null
