@@ -53,7 +53,6 @@ fun ProfileScreen(
     // 获取用户信息和登录状态
     val isLoggedIn by profileViewModel.isLoggedIn.collectAsState()
     val userProfile by profileViewModel.userProfile.collectAsState()
-    val data by exploreViewModel.data.collectAsState()
 
     val myMusicPaging = myMusicViewModel.songPagingFlow.collectAsLazyPagingItems()
 
@@ -96,13 +95,31 @@ fun ProfileScreen(
                 ItemButton(
                     text = "获取每日推荐歌单",
                     onClick = {
-                        exploreViewModel.testRecommendPlaylist()
+                        if (!isLoggedIn) {
+                            navController.navigate(ScreenRoute.LoginPage.route)
+                        } else {
+                            exploreViewModel.loadDailyRecommendPlaylists(isLoggedIn = true, force = true)
+                        }
                     }
                 )
                 ItemButton(
                     text = "获取每日推荐歌曲",
                     onClick = {
-                        exploreViewModel.testRecommendSongs()
+                        if (!isLoggedIn) {
+                            navController.navigate(ScreenRoute.LoginPage.route)
+                        } else {
+                            exploreViewModel.loadDailyRecommendSongs(isLoggedIn = true, force = true)
+                        }
+                    }
+                )
+                ItemButton(
+                    text = "获取私人FM",
+                    onClick = {
+                        if (!isLoggedIn) {
+                            navController.navigate(ScreenRoute.LoginPage.route)
+                        } else {
+                            exploreViewModel.loadPersonalFm(isLoggedIn = true, force = true)
+                        }
                     }
                 )
                 ItemButton(

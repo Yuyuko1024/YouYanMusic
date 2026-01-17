@@ -8,6 +8,8 @@
     <string name="title_login">Login</string>
     <string name="title_register">Register</string>
     <string name="title_my_liked">My liked music</string>
+    <string name="title_webview">Web</string>
+    <string name="title_playlist">Playlist</string>
 
     <!-- Drawer menu -->
     <string name="drawer_home">Home</string>

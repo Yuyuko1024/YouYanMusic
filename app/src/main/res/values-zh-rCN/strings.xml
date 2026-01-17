@@ -8,6 +8,8 @@
     <string name="title_login">登录</string>
     <string name="title_register">注册</string>
     <string name="title_my_liked">我喜欢的音乐</string>
+    <string name="title_webview">网页</string>
+    <string name="title_playlist">歌单</string>
 
     <!-- Drawer menu -->
     <string name="drawer_home">主页</string>
