@@ -260,6 +260,14 @@ class PlayerController @Inject constructor(
         }
     }
 
+    fun replaceMediaItemAt(index: Int, mediaItem: MediaItem) {
+        mediaController?.let { controller ->
+            if (index in 0 until controller.mediaItemCount) {
+                controller.replaceMediaItem(index, mediaItem)
+            }
+        }
+    }
+
     /**
      * 清空播放列表
      */

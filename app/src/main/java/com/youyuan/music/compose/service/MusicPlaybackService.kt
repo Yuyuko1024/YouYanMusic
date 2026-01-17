@@ -1,24 +1,38 @@
 package com.youyuan.music.compose.service
 
 import android.app.PendingIntent
+import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.youyuan.music.compose.BuildConfig
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.api.ApiClient
+import com.youyuan.music.compose.api.apis.SongUrlApi
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MusicPlaybackService : MediaLibraryService() {
 
     companion object {
@@ -31,6 +45,13 @@ class MusicPlaybackService : MediaLibraryService() {
 
     // 设置数据存储
     private lateinit var settingsDataStore: SettingsDataStore
+
+    @Inject
+    lateinit var apiClient: ApiClient
+
+    private val songUrlApi: SongUrlApi by lazy { apiClient.createService(SongUrlApi::class.java) }
+
+    private val playUrlCache = ConcurrentHashMap<Long, String>()
 
     private var mediaLibrarySession: MediaLibrarySession? = null
     private var player: ExoPlayer? = null
@@ -45,6 +66,38 @@ class MusicPlaybackService : MediaLibraryService() {
     }
 
     private fun initializePlayer() {
+        val upstreamFactory = DefaultDataSource.Factory(
+            this,
+            DefaultHttpDataSource.Factory()
+        )
+
+        // 解析占位 URI：yym://song/{id} -> 真实播放 URL
+        val resolvingFactory = ResolvingDataSource.Factory(upstreamFactory) { dataSpec: DataSpec ->
+            val uri = dataSpec.uri
+            if (uri.scheme != "yym" || uri.host != "song") return@Factory dataSpec
+
+            val songId = uri.pathSegments.firstOrNull()?.toLongOrNull()
+                ?: throw IOException("Invalid song placeholder uri: $uri")
+
+            val playUrl = playUrlCache[songId] ?: runBlocking {
+                val response = songUrlApi.getSongUrl(songIds = songId.toString())
+                response.data?.firstOrNull()?.url
+            }?.also { resolved ->
+                if (resolved.isNotBlank()) playUrlCache[songId] = resolved
+            }
+
+            if (playUrl.isNullOrBlank()) {
+                throw IOException("Empty play url for songId=$songId")
+            }
+
+            dataSpec.buildUpon()
+                .setUri(Uri.parse(playUrl))
+                .build()
+        }
+
+        val mediaSourceFactory = DefaultMediaSourceFactory(this)
+            .setDataSourceFactory(resolvingFactory)
+
         player = ExoPlayer.Builder(this)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -53,6 +106,7 @@ class MusicPlaybackService : MediaLibraryService() {
                     .build(),
                 true
             )
+            .setMediaSourceFactory(mediaSourceFactory)
             .build()
         player?.repeatMode = Player.REPEAT_MODE_ALL
     }

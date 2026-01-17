@@ -12,7 +12,7 @@ object PlayerPlaylistManager {
     
     data class PlaylistItem(
         val song: Song,
-        val playUrl: String,
+        val playUrl: String?,
         val albumArtUrl: String?
     )
     
@@ -37,7 +37,7 @@ object PlayerPlaylistManager {
         return _playlist.value.indexOfFirst { it.song.id == songId }
     }
     
-    fun addItem(song: Song, playUrl: String, albumArtUrl: String?) {
+    fun addItem(song: Song, playUrl: String?, albumArtUrl: String?) {
         if (containsSong(song.id)) return
         val newItem = PlaylistItem(song, playUrl, albumArtUrl)
         _playlist.value += newItem
@@ -91,6 +91,14 @@ object PlayerPlaylistManager {
         _playlist.value = items
         _currentIndex.value = 0
     }
+
+    fun updatePlayUrlBySongId(songId: Long, playUrl: String) {
+        val currentList = _playlist.value.toMutableList()
+        val idx = currentList.indexOfFirst { it.song.id == songId }
+        if (idx == -1) return
+        currentList[idx] = currentList[idx].copy(playUrl = playUrl)
+        _playlist.value = currentList
+    }
     
     fun setCurrentIndex(index: Int) {
         if (index in _playlist.value.indices) {
@@ -105,9 +113,16 @@ object PlayerPlaylistManager {
     }
     
     fun PlaylistItem.toMediaItem(): MediaItem {
-        return MediaItem.Builder()
+        val builder = MediaItem.Builder()
             .setMediaId(song.id.toString())
-            .setUri(playUrl)
+        val resolvedUri = if (!playUrl.isNullOrBlank()) {
+            Uri.parse(playUrl)
+        } else {
+            // 懒加载占位：由 Service 侧 DataSource 解析 songId -> 实际播放 URL
+            song.id?.let { Uri.parse("yym://song/$it") }
+        }
+        resolvedUri?.let { builder.setUri(it) }
+        return builder
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(song.name ?: "Unknown")
@@ -123,10 +138,17 @@ object PlayerPlaylistManager {
         return _playlist.value.map { it.toMediaItem() }
     }
     
-    fun buildMediaItem(song: Song, playUrl: String, albumArtUrl: String?): MediaItem {
-        return MediaItem.Builder()
+    fun buildMediaItem(song: Song, playUrl: String?, albumArtUrl: String?): MediaItem {
+        val builder = MediaItem.Builder()
             .setMediaId(song.id.toString())
-            .setUri(playUrl)
+        val resolvedUri = if (!playUrl.isNullOrBlank()) {
+            Uri.parse(playUrl)
+        } else {
+            // 懒加载占位：由 Service 侧 DataSource 解析 songId -> 实际播放 URL
+            song.id?.let { Uri.parse("yym://song/$it") }
+        }
+        resolvedUri?.let { builder.setUri(it) }
+        return builder
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(song.name ?: "Unknown")
