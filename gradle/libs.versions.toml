@@ -1,0 +1,111 @@
+[versions]
+agp = "8.12.3"
+coilCompose = "3.2.0"
+datastorePreferences = "1.1.7"
+devicecompat = "1.0"
+gson = "2.13.2"
+hiltCompiler = "2.57"
+hiltNavigationCompose = "1.2.0"
+kotlin = "2.2.10"
+coreKtx = "1.17.0"
+junit = "4.13.2"
+junitVersion = "1.3.0"
+espressoCore = "3.7.0"
+lazycolumnscrollbar = "2.2.0"
+lifecycleRuntimeKtx = "2.9.2"
+activityCompose = "1.10.1"
+composeBom = "2025.08.00"
+ksp = "2.2.10-2.0.2"
+animationGraphics = "1.9.0"
+lyricsCore = "0.3.1"
+lyricsUi = "1.0.6"
+navigationCompose = "2.9.0"
+navigationComposeAndroid = "2.9.0"
+renderscripToolkit = "1.0.2"
+retrofit = "2.11.0"
+roomRuntime = "2.8.4"
+saltUi = "2.8.0"
+media3 = "1.8.0"
+squigglyslider = "1.0.0"
+pinyin4j = "2.5.0"
+javaxInject = "1"
+hilt = "2.57"
+annotation = "1.8.2"
+palette = "1.0.0"
+xxpermissions = "26.5"
+androidxMaterial = "1.4.0"
+composeIcons = "1.1.1"
+paging = "3.3.0"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-ktx", version.ref = "media3" }
+androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
+androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+lazycolumnscrollbar = { module = "com.github.nanihadesuka:LazyColumnScrollbar", version.ref = "lazycolumnscrollbar" }
+lyrics-core = { module = "com.mocharealm.accompanist:lyrics-core", version.ref = "lyricsCore" }
+lyrics-ui = { module = "com.mocharealm.accompanist:lyrics-ui", version.ref = "lyricsUi" }
+renderscrip-toolkit = { module = "io.github.limuyang2:renderscrip-toolkit", version.ref = "renderscripToolkit" }
+retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
+salt-ui = { module = "io.github.moriafly:salt-ui", version.ref = "saltUi" }
+salt-core = { module = "io.github.moriafly:salt-core", version.ref = "saltUi" }
+squigglyslider = { module = "me.saket.squigglyslider:squigglyslider", version.ref = "squigglyslider" }
+pinyin4j = { module = "com.belerweb:pinyin4j", version.ref = "pinyin4j" }
+javax-inject = { group = "javax.inject", name = "javax.inject", version.ref = "javaxInject" }
+annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
+palette = { group = "androidx.palette", name = "palette", version.ref = "palette" }
+palette-ktx = { group = "androidx.palette", name = "palette-ktx", version.ref = "palette" }
+xxpermissions = { module = "com.github.getActivity:XXPermissions", version.ref = "xxpermissions" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltCompiler" }
+hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hiltCompiler" }
+androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-navigation-compose-android = { module = "androidx.navigation:navigation-compose-android", version.ref = "navigationComposeAndroid" }
+androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "roomRuntime" }
+androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomRuntime" }
+androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomRuntime" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
+androidx-animation-graphics = { module = "androidx.compose.animation:animation-graphics", version.ref = "animationGraphics" }
+androidx-animation-graphics-android = { module = "androidx.compose.animation:animation-graphics-android", version.ref = "animationGraphics" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coilCompose" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coilCompose" }
+devicecompat = { module = "com.github.getActivity:DeviceCompat", version.ref = "devicecompat" }
+androidx-material = { module = "androidx.compose.material3:material3", version.ref = "androidxMaterial" }
+androidx-material-icons = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "androidxMaterial" }
+androidx-paging-runtime = { group = "androidx.paging", name = "paging-runtime", version.ref = "paging" }
+androidx-paging-compose = { group = "androidx.paging", name = "paging-compose", version.ref = "paging" }
+
+composeIcons-cssGg = { module = "br.com.devsrsouza.compose.icons:css-gg", version.ref = "composeIcons" }
+composeIcons-weatherIcons = { module = "br.com.devsrsouza.compose.icons:erikflowers-weather-icons", version.ref = "composeIcons" }
+composeIcons-evaIcons = { module = "br.com.devsrsouza.compose.icons:eva-icons", version.ref = "composeIcons" }
+composeIcons-feather = { module = "br.com.devsrsouza.compose.icons:feather", version.ref = "composeIcons" }
+composeIcons-fontAwesome = { module = "br.com.devsrsouza.compose.icons:font-awesome", version.ref = "composeIcons" }
+composeIcons-lineAwesome = { module = "br.com.devsrsouza.compose.icons:line-awesome", version.ref = "composeIcons" }
+composeIcons-linea = { module = "br.com.devsrsouza.compose.icons:linea", version.ref = "composeIcons" }
+composeIcons-octicons = { module = "br.com.devsrsouza.compose.icons:octicons", version.ref = "composeIcons" }
+composeIcons-simpleIcons = { module = "br.com.devsrsouza.compose.icons:simple-icons", version.ref = "composeIcons" }
+composeIcons-tablerIcons = { module = "br.com.devsrsouza.compose.icons:tabler-icons", version.ref = "composeIcons" }
+
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+

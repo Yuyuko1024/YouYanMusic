@@ -1,0 +1,260 @@
+package com.youyuan.music.compose.ui.player
+
+import android.content.Context
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.media3.common.util.UnstableApi
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import com.moriafly.salt.ui.Icon
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.Text
+import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.youyuan.music.compose.R
+import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
+import compose.icons.TablerIcons
+import compose.icons.tablericons.PlayerPause
+import compose.icons.tablericons.PlayerPlay
+import compose.icons.tablericons.Playlist
+
+@UnstableSaltUiApi
+@ExperimentalMaterial3Api
+@UnstableApi
+@ExperimentalFoundationApi
+@Composable
+fun MiniPlayer(
+    modifier: Modifier = Modifier,
+    context: Context,
+    playerViewModel: PlayerViewModel,
+    onPlaylistClick: () -> Unit = {},
+) {
+
+    // 当前Song对象
+    val currentSong = playerViewModel.currentSong.collectAsState().value
+    // 封面
+    val currentArtworkUrl = playerViewModel.currentAlbumArtUrl.collectAsState().value
+    // 标题
+    val title = currentSong?.name ?: stringResource(R.string.unknown_song)
+    // 艺术家
+    val artistName = playerViewModel.currentArtistNames.collectAsState().value
+
+    Row(
+        modifier = modifier
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+
+        Spacer(
+            modifier = Modifier
+                .size(6.dp)
+                .align(Alignment.CenterVertically)
+        )
+        // 封面图片容器和背景
+        Card(
+            modifier = Modifier
+                .size(58.dp)
+                .padding(4.dp)
+                .align(Alignment.CenterVertically),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(currentArtworkUrl ?: R.drawable.ic_nav_music) // 默认图片,
+                    .crossfade(true)
+                    .crossfade(1000)
+                    .build(),
+                modifier = Modifier
+                    .size(58.dp)
+                    .align(Alignment.CenterHorizontally),
+                contentDescription = "Cover art",
+                alignment = Alignment.Center,
+                contentScale = ContentScale.Crop
+            )
+        }
+        // 间隔8dp
+        Spacer(
+            modifier = Modifier
+                .padding(horizontal = 4.dp, vertical = 4.dp)
+                .align(Alignment.CenterVertically)
+        )
+        // 歌曲信息容器
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(8.dp)
+                .align(Alignment.CenterVertically)
+        ) {
+            Text(
+                text = title,
+                style = SaltTheme.textStyles.main,
+                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
+                maxLines = 1,
+            )
+            Text(
+                text = artistName,
+                style = SaltTheme.textStyles.sub,
+                maxLines = 1,
+                color = SaltTheme.colors.subText
+            )
+        }
+
+        // 将播放控制相关组件封装起来
+        PlayerControls(
+            modifier = Modifier.align(Alignment.CenterVertically),
+            playerViewModel = playerViewModel,
+            onPlaylistClick = onPlaylistClick
+        )
+    }
+}
+
+/**
+ * 播放控制组件，将频繁更新的状态读取限制在此范围内
+ */
+@UnstableSaltUiApi
+@ExperimentalMaterial3Api
+@UnstableApi
+@ExperimentalFoundationApi
+@Composable
+private fun PlayerControls(
+    modifier: Modifier = Modifier,
+    playerViewModel: PlayerViewModel,
+    onPlaylistClick: () -> Unit = {}
+) {
+    // 进度
+    val currentPosition by playerViewModel.currentPosition.collectAsState()
+    val duration by playerViewModel.duration.collectAsState()
+
+    // 播放状态
+    val isPlaying by playerViewModel.isPlaying.collectAsState()
+
+    Row(modifier = modifier) {
+        // 播放按钮
+        Box(
+            modifier = Modifier
+                .size(48.dp, 48.dp)
+        ) {
+            PlayPauseButton(
+                modifier = Modifier.align(Alignment.Center),
+                isPlaying = isPlaying,
+                onClick = {
+                    playerViewModel.togglePlayPause()
+                }
+            )
+            CircularProgressIndicator(
+                progress = {
+                    if (duration > 0) {
+                        currentPosition.toFloat() / duration.toFloat()
+                    } else {
+                        0f
+                    }
+                },
+                modifier = Modifier
+                    .size(36.dp)
+                    .align(Alignment.Center),
+                color = SaltTheme.colors.highlight,
+                strokeWidth = 3.dp,
+                trackColor = SaltTheme.colors.subBackground,
+            )
+        }
+        // 播放列表按钮
+        Box(
+            modifier = Modifier
+                .size(48.dp, 48.dp)
+        ) {
+            IconButton(
+                modifier = Modifier.align(Alignment.Center),
+                onClick = onPlaylistClick
+            ) {
+                Icon(
+                    painter = rememberVectorPainter(TablerIcons.Playlist),
+                    contentDescription = "播放列表",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PlayPauseButton(
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    // 点击时的缩放动画
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.85f else 1f,
+        animationSpec = tween(100),
+        label = "press_scale"
+    )
+
+    // 状态变化时的缩放动画
+    val stateScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1.1f else 1f,
+        animationSpec = tween(300),
+        label = "state_scale"
+    )
+
+    IconButton(
+        modifier = modifier
+            .size(48.dp)
+            .padding(8.dp),
+        onClick = onClick,
+        interactionSource = remember { MutableInteractionSource() }
+            .also { interactionSource ->
+                LaunchedEffect(interactionSource) {
+                    interactionSource.interactions.collect { interaction ->
+                        when (interaction) {
+                            is PressInteraction.Press -> isPressed = true
+                            is PressInteraction.Release -> isPressed = false
+                            is PressInteraction.Cancel -> isPressed = false
+                        }
+                    }
+                }
+            }
+    ) {
+        Icon(
+            painter = if (isPlaying) {
+                rememberVectorPainter(TablerIcons.PlayerPause)
+            } else {
+                rememberVectorPainter(TablerIcons.PlayerPlay)
+            },
+            contentDescription = null,
+            modifier = Modifier
+                .size(24.dp)
+                .scale(pressScale * stateScale), // 组合两个缩放效果
+        )
+    }
+}
