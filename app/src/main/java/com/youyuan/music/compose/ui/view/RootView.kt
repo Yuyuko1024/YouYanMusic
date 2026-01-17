@@ -46,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastAny
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavHostController
@@ -56,6 +57,7 @@ import com.moriafly.salt.ui.BottomBar
 import com.moriafly.salt.ui.BottomBarItem
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.moriafly.salt.ui.dialog.InputDialog
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.constants.AppBarHeight
 import com.youyuan.music.compose.constants.MiniPlayerHeight
@@ -71,6 +73,7 @@ import com.youyuan.music.compose.ui.uicomponent.TopAppBarType
 import com.youyuan.music.compose.ui.utils.LocalPlayerAwareWindowInsets
 import com.youyuan.music.compose.ui.utils.appBarScrollBehavior
 import com.youyuan.music.compose.ui.utils.canGoBack
+import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
 import kotlinx.coroutines.launch
@@ -90,7 +93,49 @@ fun RootView(
     modifier: Modifier = Modifier
 ) {
 
-    // 使用 Hilt 注入的 ViewModel
+    val scope = rememberCoroutineScope()
+    val appConfigViewModel: AppConfigViewModel = hiltViewModel()
+    val savedApiUrl by appConfigViewModel.savedApiUrl.collectAsState()
+    val effectiveApiUrl by appConfigViewModel.effectiveApiUrl.collectAsState()
+
+    // 首次安装初始化：若用户未保存过 API Endpoint，则强制填写（不可取消）
+    // savedApiUrl == null 表示仍在从 DataStore 加载，避免冷启动闪现弹窗。
+    if (savedApiUrl != null && savedApiUrl!!.isBlank()) {
+        var apiUrlInput by rememberSaveable(effectiveApiUrl) { mutableStateOf(effectiveApiUrl) }
+
+        InputDialog(
+            onDismissRequest = {
+                // negative：退出 App（对话框不可被外部取消）
+                context.finishAffinity()
+            },
+            onConfirm = {
+                scope.launch {
+                    try {
+                        appConfigViewModel.persistAndApplyApiUrl(apiUrlInput)
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            context,
+                            e.message ?: context.getString(R.string.settings_api_endpoint_invalid),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            },
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            ),
+            title = stringResource(R.string.settings_api_endpoint_required_title),
+            text = apiUrlInput,
+            onChange = { apiUrlInput = it },
+            hint = stringResource(R.string.settings_api_endpoint_hint),
+            cancelText = stringResource(R.string.exit_app),
+            confirmText = stringResource(R.string.confirm)
+        )
+        return
+    }
+
+    // 使用 Hilt 注入的 ViewModel（确保 API Endpoint 已就绪）
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val searchViewModel: SearchViewModel = hiltViewModel()
     val profileViewModel: ProfileViewModel = hiltViewModel()

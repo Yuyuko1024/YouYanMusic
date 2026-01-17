@@ -1,50 +1,35 @@
 # YouYanMusic Copilot Instructions
 
 ## Big Picture
-YouYanMusic is a Kotlin + Jetpack Compose music player using Salt UI + Hilt + Media3.
-Main flow: `MainActivity` → `YouYanMusicTheme` → `RootView` (drawer/top bar/nav + mini-player bottom sheet) → screen composables.
+- Kotlin + Jetpack Compose 音乐播放器：Salt UI + Hilt + Media3。
+- 主链路：`MainActivity` → `YouYanMusicTheme` → `RootView`（抽屉/TopAppBar/NavHost/BottomSheetPlayer）。
 
-## Architecture (verified)
-- **DI**: App is `App` (`@HiltAndroidApp`). Activities use `@AndroidEntryPoint`. ViewModels use `@HiltViewModel`.
-- **UI shell**: `ui/view/RootView.kt` owns `NavHostController`, `DismissibleNavigationDrawer` (gestures disabled), `TopAppBar`, `BottomBar`, and the player bottom-sheet/insets.
-- **Navigation**: Routes are a sealed class in `ui/screens/ScreenRoute.kt`. Destinations are registered in `ui/screens/NavBuilder.kt` via `navigationBuilder(...)`.
-  - Dynamic route example: `ScreenRoute.LikedSong.createRoute(userId)`.
-- **Player**:
-  - Playback service is `service/MusicPlaybackService.kt` (Media3 `MediaLibraryService` + `ExoPlayer`), registered in `AndroidManifest.xml` with `foregroundServiceType="mediaPlayback"`.
-  - UI talks to the service via Media3 `MediaController` in `utils/PlayerController.kt` (`@Singleton`, built from a `SessionToken`).
-  - App exit is triggered via `MusicPlaybackService.ACTION_EXIT_APP` (handled by a receiver in `MainActivity`).
+## Architecture（按代码验证）
+- DI：`App` 使用 `@HiltAndroidApp`；`MainActivity` 为 `@AndroidEntryPoint`；ViewModel 为 `@HiltViewModel`。
+- UI 外壳：`ui/view/RootView.kt` 持有 `NavHostController`、抽屉（`gesturesEnabled=false`）、TopAppBar、底部栏显示/隐藏逻辑，以及播放器 BottomSheet 状态与 Insets。
+- 导航：`ui/screens/ScreenRoute.kt` 定义路由；`ui/screens/NavBuilder.kt` 的 `navigationBuilder(...)` 注册 destinations。
+  - 动态路由示例：`ScreenRoute.LikedSong.createRoute(userId)` → `liked/{userId}`。
 
-## Networking & Auth/Cookies
-- **ApiClient singleton**: `api/ApiClient.kt` wraps Retrofit/OkHttp, injects browser-like headers, and persists cookies via a custom `CookieManager` (`cookieJar(...)`).
-- **Provided via Hilt**: `di/NetworkModule.kt` provides a singleton `ApiClient` using `constants/AppConstants.APP_API_ENDPOINT`.
-- **Backend API docs**: `netease-cloudmusic-apidoc-home.md` (NeteaseCloudMusicApiEnhanced, typically hosted on port 3000).
-  - Server may cache identical URLs for ~2 minutes; add a `timestamp` query to bypass when needed (QR/login flows already do this in `QrCodeLoginApi`).
-  - Many endpoints require login cookies; missing cookie often manifests as `301` (doc notes this). `ApiClient` has a cookie jar + helpers like `saveCookieString(...)`.
-  - If you see `460` (“cheating异常”) on restricted environments, doc suggests `realIP=...` or `randomCNIP=true` on requests.
-- **Risk control handling**:
-  - `ApiClient` may throw `IOException("RISK_CONTROL_-462:...")` when body contains `{"code":-462,...}`.
-  - `PlayerViewModel` detects this and enters a short backoff + exposes a user-facing `error` `StateFlow` (shown as a Toast in `RootView`).
-- **ViewModel pattern**: create Retrofit services from the injected client:
-  ```kotlin
-  private val songApi: SongApi = apiClient.createService(SongApi::class.java)
-  ```
+## Player（Media3）
+- 服务端：`service/MusicPlaybackService.kt`（`MediaLibraryService` + `ExoPlayer`），在 `app/src/main/AndroidManifest.xml` 注册并声明 `foregroundServiceType="mediaPlayback"`。
+- UI/VM 控制：`utils/PlayerController.kt` 用 `SessionToken` 异步构建 `MediaController`（`@Singleton`），对外暴露 `StateFlow`（连接/播放/缓冲/循环/随机/索引）。
+- 退出应用：服务广播 `MusicPlaybackService.ACTION_EXIT_APP`，`MainActivity` 用 `LocalBroadcastManager` 接收并 `finishAffinity()`。
 
-## Settings / Configuration
-- **Base URL**: `constants/AppConstants.kt` contains the endpoint used by `NetworkModule` today.
-  - `APP_API_ENDPOINT` is intended for a future “custom API backend” dialog, but there is **no current plan** to implement that UI.
-  - `pref/SettingsDataStore.appApiUrl` exists, but is **not** wired into `ApiClient` right now (changing it won’t change network calls unless DI is updated).
-- **User settings**: `pref/SettingsDataStore.kt` stores preferences (dynamic color + player behaviors).
-- **Theme toggle wiring**: `MainActivity` collects `appDynamicColorEnabled` to configure `YouYanMusicTheme`.
-- **Cleartext HTTP**: `app/src/main/AndroidManifest.xml` sets `android:usesCleartextTraffic="true"`.
+## Networking / Cookies / 风控
+- Retrofit/OkHttp：`api/ApiClient.kt`（Hilt 单例由 `di/NetworkModule.kt` 提供），baseUrl 当前来自 `constants/AppConstants.APP_API_ENDPOINT`。
+- Cookie：`api/CookieManager.kt` 作为 OkHttp `CookieJar` 持久化到 `SharedPreferences`；`ApiClient.saveCookieString(...)` 可手动灌 cookie。
+- 风控：`ApiClient` 拦截响应 body 中 `"code":-462` 并抛 `IOException("RISK_CONTROL_-462:...")`；`ui/viewmodel/PlayerViewModel.kt` 识别后进入退避并通过 `error: StateFlow<String?>` 让 `RootView` Toast。
+- API 文档：`netease-cloudmusic-apidoc-home.md`；QR 登录接口 `api/apis/QrCodeLoginApi.kt` 默认带 `timestamp` 防缓存。
 
-## State & Logging
-- **State**: ViewModels expose `StateFlow` (e.g. `PlayerViewModel.currentSong`, `isPlaying`, `currentPosition`). UI collects with `collectAsState`.
-- **Logging**: Use `utils/Logger.kt` (debug logs guarded by `BuildConfig.DEBUG`).
+## Project Conventions
+- ViewModel 里从注入的 `ApiClient` 建 service：`private val songApi = apiClient.createService(SongApi::class.java)`（多处同模式）。
+- 日志：用 `utils/Logger.kt`（Debug 日志受 `BuildConfig.DEBUG` 控制）。
+- 设置：`pref/SettingsDataStore.kt` 存偏好（动态取色/播放器行为等）。`APP_API_URL` 已接入网络：首次启动会强制弹窗填写，且在设置页可修改；由 `ui/viewmodel/AppConfigViewModel.kt` 同步到 `api/ApiClient.kt`（运行时重写请求 host）。
 
-## Common edits
-- **Add a screen**: add route in `ui/screens/ScreenRoute.kt` → add `composable(...)` in `ui/screens/NavBuilder.kt` → if it’s a main tab, add to `ScreenRoute.MainScreens` and ensure `RootView` navigation UI logic still works.
-- **Add an API endpoint**: create interface in `api/apis/` + models in `api/model/` → create service inside the relevant ViewModel via `apiClient.createService(...)`.
+## Common Edits
+- 新增页面：加路由到 `ui/screens/ScreenRoute.kt` → 在 `ui/screens/NavBuilder.kt` 增加 `composable(...)`；若是主 Tab，同步 `ScreenRoute.MainScreens` 并检查 `RootView` 底栏显示逻辑。
+- 新增接口：在 `api/apis/` 增 Retrofit interface + `api/model/` 数据类；在对应 ViewModel 里通过 `apiClient.createService(...)` 使用。
 
-## Build/Test (Gradle)
-- Primary workflow: run/debug from **Android Studio**.
-- Optional CLI tasks (if needed): `./gradlew.bat :app:assembleDebug`, `./gradlew.bat :app:test`.
+## Build / Run
+- 推荐：Android Studio Run/Debug。
+- CLI（Linux/macOS）：`./gradlew :app:assembleDebug`，单测：`./gradlew :app:testDebugUnitTest`。

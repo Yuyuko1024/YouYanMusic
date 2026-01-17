@@ -6,19 +6,22 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.Strictness
 import okhttp3.Interceptor
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.getValue
 import androidx.core.net.toUri
+import java.util.concurrent.atomic.AtomicReference
 
 class ApiClient private constructor(
     private val context: Context,
-    private val baseUrl: String,
+    private var baseUrl: String,
     private val isDebug: Boolean = false
 ) {
     companion object {
@@ -48,6 +51,10 @@ class ApiClient private constructor(
 
     }
 
+    private val baseUrlRef: AtomicReference<HttpUrl?> = AtomicReference(
+        normalizeApiBaseUrl(baseUrl).toHttpUrlOrNull()
+    )
+
     private val cookieManager: CookieManager by lazy {
         CookieManager(context)
     }
@@ -63,6 +70,8 @@ class ApiClient private constructor(
             .connectTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
             .readTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
             .writeTimeout(DEFAULT_TIMEOUT, TimeUnit.SECONDS)
+            // 运行时可切换 baseUrl：在真正发起请求前重写 scheme/host/port
+            .addInterceptor(DynamicBaseUrlInterceptor(baseUrlRef))
             .cookieJar(cookieManager)
             .addInterceptor(RiskControlInterceptor())
             // 添加请求头拦截器，模拟浏览器请求
@@ -84,6 +93,38 @@ class ApiClient private constructor(
             builder.addNetworkInterceptor(loggingInterceptor)
         }
         builder.build()
+    }
+
+    private class DynamicBaseUrlInterceptor(
+        private val baseUrlRef: AtomicReference<HttpUrl?>
+    ) : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val base = baseUrlRef.get() ?: return chain.proceed(chain.request())
+
+            val original = chain.request()
+            val originalUrl = original.url
+
+            val baseSegments = base.encodedPathSegments.filter { it.isNotEmpty() }
+            val originalSegments = originalUrl.encodedPathSegments.filter { it.isNotEmpty() }
+            val mergedSegments = if (baseSegments.isEmpty()) {
+                originalSegments
+            } else {
+                baseSegments + originalSegments
+            }
+
+            val newUrl = originalUrl.newBuilder()
+                .scheme(base.scheme)
+                .host(base.host)
+                .port(base.port)
+                .encodedPath("/" + mergedSegments.joinToString("/"))
+                .build()
+
+            return chain.proceed(
+                original.newBuilder()
+                    .url(newUrl)
+                    .build()
+            )
+        }
     }
 
     private class RiskControlInterceptor : Interceptor {
@@ -120,12 +161,33 @@ class ApiClient private constructor(
         }
     }
 
+    // Retrofit 的 baseUrl 仅用于拼接 path；实际请求 host 会被 DynamicBaseUrlInterceptor 重写。
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(baseUrl)
+            .baseUrl("http://localhost/")
             .client(okHttp)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
+    }
+
+    private fun normalizeApiBaseUrl(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return ""
+        return if (trimmed.endsWith("/")) trimmed else "$trimmed/"
+    }
+
+    /**
+     * 更新当前 API baseUrl（立即影响后续请求）。
+     * @return 是否更新成功（URL 非法时返回 false）
+     */
+    fun setBaseUrl(newBaseUrl: String): Boolean {
+        val normalized = normalizeApiBaseUrl(newBaseUrl)
+        val httpUrl = normalized.toHttpUrlOrNull() ?: return false
+        if (httpUrl.scheme != "http" && httpUrl.scheme != "https") return false
+
+        baseUrl = httpUrl.toString()
+        baseUrlRef.set(httpUrl)
+        return true
     }
 
     /**
@@ -153,7 +215,7 @@ class ApiClient private constructor(
      * 手动保存 cookie 字符串（用于从响应 body 中获取的 cookie）
      */
     fun saveCookieString(cookieString: String) {
-        val host = baseUrl.toUri().host
+        val host = baseUrlRef.get()?.host
         Log.d("ApiClient", "saveCookieString: baseUrl=$baseUrl, host=$host")
         if (host == null) {
             Log.e("ApiClient", "saveCookieString: host is null!")
@@ -166,7 +228,7 @@ class ApiClient private constructor(
      * 检查是否有已保存的 cookie
      */
     fun hasCookies(): Boolean {
-        val host = baseUrl.toUri().host
+        val host = baseUrlRef.get()?.host
         Log.d("ApiClient", "hasCookies: baseUrl=$baseUrl, host=$host")
         if (host == null) return false
         val result = cookieManager.hasCookiesForHost(host)
