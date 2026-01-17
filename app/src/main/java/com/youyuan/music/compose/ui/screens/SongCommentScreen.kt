@@ -86,6 +86,7 @@ fun SongCommentScreen(
                         append(stringResource(R.string.comments_title))
                         if (total > 0) append(" ($total)")
                     },
+                    color = SaltTheme.colors.text,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -148,7 +149,7 @@ fun SongCommentScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = SaltTheme.colors.subText,
                         )
                     }
                 }
@@ -174,6 +175,7 @@ fun SongCommentScreen(
 private fun SectionHeader(title: String) {
     Text(
         text = title,
+        color = SaltTheme.colors.text,
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier
@@ -217,6 +219,7 @@ private fun CommentRow(comment: CommentItem) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = nickname,
+                        color = SaltTheme.colors.text,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
@@ -232,7 +235,7 @@ private fun CommentRow(comment: CommentItem) {
                                 }
                             },
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = SaltTheme.colors.subText,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -244,12 +247,12 @@ private fun CommentRow(comment: CommentItem) {
                         imageVector = TablerIcons.Heart,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = SaltTheme.colors.subText,
                     )
                     Text(
                         text = likedCount.toString(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = SaltTheme.colors.subText,
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 }
@@ -258,6 +261,7 @@ private fun CommentRow(comment: CommentItem) {
             if (content.isNotBlank()) {
                 Text(
                     text = content,
+                    color = SaltTheme.colors.text,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(top = 6.dp)
                 )
@@ -269,7 +273,7 @@ private fun CommentRow(comment: CommentItem) {
                 Text(
                     text = "@${repliedUser}：${replied.content}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = SaltTheme.colors.subText,
                     modifier = Modifier
                         .padding(top = 6.dp)
                         .fillMaxWidth()
