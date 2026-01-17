@@ -1,6 +1,7 @@
 package com.youyuan.music.compose.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -193,6 +194,9 @@ private fun CommentRow(comment: CommentItem) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable {
+                // do nothing
+            }
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {

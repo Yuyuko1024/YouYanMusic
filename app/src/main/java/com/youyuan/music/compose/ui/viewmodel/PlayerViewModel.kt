@@ -17,6 +17,7 @@ import com.youyuan.music.compose.api.apis.SongUrlApi
 import com.youyuan.music.compose.api.model.Artist
 import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.api.model.Song
+import com.youyuan.music.compose.data.SongDetailPool
 import com.youyuan.music.compose.utils.Logger
 import com.youyuan.music.compose.utils.PlayerController
 import com.youyuan.music.compose.utils.PlayerPlaylistManager
@@ -58,7 +59,8 @@ import javax.inject.Inject
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     private val apiClient: ApiClient,
-    private val playerController: PlayerController
+    private val playerController: PlayerController,
+    private val songDetailPool: SongDetailPool,
 ) : ViewModel() {
     companion object {
         const val TAG = "PlayerViewModel"
@@ -932,7 +934,7 @@ class PlayerViewModel @Inject constructor(
         val detailsById: Map<Long, SongDetail> = try {
             val response = songApi.getSongDetails(missing.joinToString(","))
             throwIfRiskCode(response.code)
-            response.songs.orEmpty().associateBy { it.id }
+            response.songs.orEmpty().also { songDetailPool.putAll(it) }.associateBy { it.id }
         } catch (e: Exception) {
             if (e is RiskControlException) throw e
             throwIfRisk(e)
@@ -1028,7 +1030,7 @@ class PlayerViewModel @Inject constructor(
         val detail = try {
             val r = songApi.getSongDetails(songId.toString())
             throwIfRiskCode(r.code)
-            r.songs?.firstOrNull()
+            r.songs?.also { songDetailPool.putAll(it) }?.firstOrNull()
         } catch (e: Exception) {
             if (e is RiskControlException) throw e
             throwIfRisk(e)
