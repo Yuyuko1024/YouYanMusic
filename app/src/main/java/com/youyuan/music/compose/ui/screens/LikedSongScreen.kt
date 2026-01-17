@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -56,11 +57,13 @@ fun LikedSongScreen(
 
     val lazyPagingItems = myMusicViewModel.songPagingFlow.collectAsLazyPagingItems()
 
-    LaunchedEffect(Unit) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(userId) {
         myMusicViewModel.loadLikedSongs(userId.toString())
     }
 
-    LazyColumn {
+    LazyColumn(state = listState) {
         items(
             count = lazyPagingItems.itemCount,
             key = { index ->
