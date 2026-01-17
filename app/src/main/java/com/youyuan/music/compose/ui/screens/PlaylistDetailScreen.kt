@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,14 +28,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
+import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlaylistDetailViewModel
-import com.youyuan.music.compose.utils.toSong
+import com.youyuan.music.compose.ui.uicomponent.SongItem
+import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
 
 @UnstableApi
 @UnstableSaltUiApi
@@ -52,6 +52,9 @@ fun PlaylistDetailScreen(
     val playlist by viewModel.playlist.collectAsState()
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
+
+    val allSongIds by viewModel.allSongIds.collectAsState()
+    val lazyPagingItems = viewModel.songPagingFlow.collectAsLazyPagingItems()
 
     LaunchedEffect(playlistId) {
         viewModel.loadPlaylistDetail(playlistId)
@@ -93,12 +96,9 @@ fun PlaylistDetailScreen(
                     return@Box
                 }
 
-                val tracks: List<SongDetail> = data.tracks.orEmpty()
-                val allSongIds = tracks.map { it.id }
-
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     item {
                         PlaylistHeader(
@@ -119,7 +119,7 @@ fun PlaylistDetailScreen(
                         )
                     }
 
-                    if (tracks.isEmpty()) {
+                    if (lazyPagingItems.itemCount == 0) {
                         item {
                             Text(
                                 text = "暂无歌曲",
@@ -129,19 +129,36 @@ fun PlaylistDetailScreen(
                             )
                         }
                     } else {
-                        itemsIndexed(tracks, key = { _, s -> s.id }) { index, songDetail ->
-                            val song = songDetail.toSong()
-                            PlaylistSongRow(
-                                index = index + 1,
-                                title = song.name,
-                                subtitle = song.artists?.joinToString(", ") { it.name ?: "" }?.trim().orEmpty(),
-                                onClick = {
-                                    playerViewModel.playTargetSongWithPlaylist(
-                                        targetSongId = songDetail.id,
-                                        allSongIds = allSongIds,
-                                    )
-                                }
-                            )
+                        items(
+                            count = lazyPagingItems.itemCount,
+                            key = { index ->
+                                val song = lazyPagingItems[index]
+                                song?.id ?: index
+                            }
+                        ) { index ->
+                            val song = lazyPagingItems[index]
+                            if (song != null) {
+                                SongItem(
+                                    song = song,
+                                    onClick = { songId ->
+                                        // 把当前已加载的列表项写入对象池，供播放器复用/补全后反哺列表
+                                        viewModel.putSongDetailsToPool(
+                                            lazyPagingItems.itemSnapshotList.items
+                                        )
+
+                                        val ids = allSongIds.ifEmpty {
+                                            lazyPagingItems.itemSnapshotList.items.map { it.id }
+                                        }
+
+                                        playerViewModel.playTargetSongWithPlaylistSmart(
+                                            targetSongId = songId,
+                                            allSongIds = ids,
+                                        )
+                                    }
+                                )
+                            } else {
+                                SongItemPlaceholder()
+                            }
                         }
                     }
 
@@ -219,48 +236,7 @@ private fun PlaylistHeader(
     }
 }
 
-@Composable
-private fun PlaylistSongRow(
-    index: Int,
-    title: String?,
-    subtitle: String?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = index.toString(),
-            style = SaltTheme.textStyles.sub,
-            color = SaltTheme.colors.subText,
-            modifier = Modifier.padding(end = 10.dp)
-        )
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = title ?: "",
-                style = SaltTheme.textStyles.main,
-                color = SaltTheme.colors.text,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = SaltTheme.textStyles.sub,
-                    color = SaltTheme.colors.subText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
+// 歌曲条目复用 LikedSongScreen 的 SongItem（带封面）
 
 private fun formatCount(value: Long): String {
     return when {

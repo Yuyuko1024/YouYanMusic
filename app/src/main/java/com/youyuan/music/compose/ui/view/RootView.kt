@@ -78,8 +78,6 @@ import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
 import kotlinx.coroutines.launch
 import com.youyuan.music.compose.ui.uicomponent.AppDrawer
-import com.youyuan.music.compose.ui.viewmodel.ExploreViewModel
-import com.youyuan.music.compose.ui.viewmodel.MyMusicViewModel
 import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 
 @OptIn(UnstableApi::class)
@@ -139,8 +137,6 @@ fun RootView(
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val searchViewModel: SearchViewModel = hiltViewModel()
     val profileViewModel: ProfileViewModel = hiltViewModel()
-    val exploreViewModel: ExploreViewModel = hiltViewModel()
-    val myMusicViewModel: MyMusicViewModel = hiltViewModel()
 
     val playerError by playerViewModel.error.collectAsState()
 
@@ -234,7 +230,6 @@ fun RootView(
             currentRoute == ScreenRoute.Settings.route -> stringResource(R.string.drawer_settings)
             currentRoute == ScreenRoute.LoginPage.route -> stringResource(R.string.title_login)
             currentRoute == ScreenRoute.RegisterPage.route -> stringResource(R.string.title_register)
-            currentRoute?.startsWith("liked/") == true -> stringResource(R.string.title_my_liked)
             currentRoute?.startsWith("comments/") == true -> stringResource(R.string.comments_title)
             currentRoute?.startsWith("playlist/") == true -> stringResource(R.string.title_playlist)
             currentRoute == ScreenRoute.InAppWebView.route -> stringResource(R.string.title_webview)
@@ -325,8 +320,6 @@ fun RootView(
                         searchViewModel = searchViewModel,
                         playerViewModel = playerViewModel,
                         profileViewModel = profileViewModel,
-                        exploreViewModel = exploreViewModel,
-                        myMusicViewModel = myMusicViewModel,
                     )
                 }
 

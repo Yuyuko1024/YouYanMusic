@@ -12,8 +12,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.youyuan.music.compose.ui.viewmodel.ExploreViewModel
-import com.youyuan.music.compose.ui.viewmodel.MyMusicViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
@@ -29,8 +27,6 @@ fun NavGraphBuilder.navigationBuilder(
     searchViewModel: SearchViewModel,
     playerViewModel: PlayerViewModel,
     profileViewModel: ProfileViewModel,
-    exploreViewModel: ExploreViewModel,
-    myMusicViewModel: MyMusicViewModel,
 ) {
     composable(ScreenRoute.Explore.route) {
         ExploreScreen(
@@ -44,8 +40,6 @@ fun NavGraphBuilder.navigationBuilder(
             context = context,
             navController = navController,
             profileViewModel = profileViewModel,
-            exploreViewModel = exploreViewModel,
-            myMusicViewModel = myMusicViewModel,
         )
     }
     composable(ScreenRoute.Search.route) {
@@ -65,22 +59,6 @@ fun NavGraphBuilder.navigationBuilder(
             navController = navController
         )
     }
-    // 喜欢的音乐
-    composable(
-        route = ScreenRoute.LikedSong.route,
-        arguments = listOf(
-            navArgument("userId") { type = NavType.LongType }
-        )
-    ) { backStackEntry ->
-        val userId = backStackEntry.arguments?.getLong("userId") ?: 0L
-        LikedSongScreen(
-            userId = userId,
-            myMusicViewModel = myMusicViewModel,
-            playerViewModel = playerViewModel,
-        )
-
-    }
-
     // 歌曲评论
     composable(
         route = ScreenRoute.SongComments.route,

@@ -27,4 +27,13 @@ data class PlaylistDetail(
     val playCount: Long? = null,
     @SerializedName("tracks")
     val tracks: List<SongDetail>? = null,
+
+    // /playlist/detail 会返回完整 trackIds；用于构建全量播放队列（不必先把所有 SongDetail 拉完）。
+    @SerializedName("trackIds")
+    val trackIds: List<PlaylistTrackId>? = null,
+)
+
+data class PlaylistTrackId(
+    @SerializedName("id")
+    val id: Long,
 )

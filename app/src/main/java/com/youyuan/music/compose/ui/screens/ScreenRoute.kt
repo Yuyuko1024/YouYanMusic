@@ -16,9 +16,6 @@ sealed class ScreenRoute(open val route: String) {
     object LoginPage : ScreenRoute("loginPage")
     object RegisterPage : ScreenRoute("registerPage")
 
-    object LikedSong : ScreenRoute("liked/{userId}") {
-        fun createRoute(userId: Long): String = "liked/$userId"
-    }
 
     object SongComments : ScreenRoute("comments/{songId}") {
         fun createRoute(songId: Long): String = "comments/$songId"

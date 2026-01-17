@@ -6,10 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.CaptchaApi
 import com.youyuan.music.compose.api.apis.LoginApi
+import com.youyuan.music.compose.api.apis.ProfileApi
 import com.youyuan.music.compose.api.apis.QrCodeLoginApi
 import com.youyuan.music.compose.api.apis.SmsLoginApi
 import com.youyuan.music.compose.api.model.CaptchaResponse
 import com.youyuan.music.compose.api.model.Profile
+import com.youyuan.music.compose.api.model.UserPlaylistItem
 import com.youyuan.music.compose.pref.TokenDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -36,7 +38,20 @@ class ProfileViewModel @Inject constructor(
     private val loginApi: LoginApi = apiClient.createService(LoginApi::class.java)
     private val captchaApi: CaptchaApi = apiClient.createService(CaptchaApi::class.java)
     private val smsLoginApi: SmsLoginApi = apiClient.createService(SmsLoginApi::class.java)
+    private val profileApi: ProfileApi = apiClient.createService(ProfileApi::class.java)
     private val tokenDataStore = TokenDataStore(context)
+
+    // 用户歌单
+    private val _userPlaylists = MutableStateFlow<List<UserPlaylistItem>>(emptyList())
+    val userPlaylists: StateFlow<List<UserPlaylistItem>> = _userPlaylists.asStateFlow()
+
+    private val _userPlaylistsLoading = MutableStateFlow(false)
+    val userPlaylistsLoading: StateFlow<Boolean> = _userPlaylistsLoading.asStateFlow()
+
+    private val _userPlaylistsError = MutableStateFlow<String?>(null)
+    val userPlaylistsError: StateFlow<String?> = _userPlaylistsError.asStateFlow()
+
+    private var lastLoadedUserPlaylistUid: Long? = null
 
     // 二维码图片 Base64
     private val _qrCodeImage = MutableStateFlow<String?>(null)
@@ -253,16 +268,62 @@ class ProfileViewModel @Inject constructor(
                         avatarUrl = profile.avatarUrl,
                         backgroundUrl = profile.backgroundUrl
                     )
+
+                    // 登录成功后，拉取一次用户歌单（避免 UI 需要额外触发）
+                    loadUserPlaylists(force = true)
                 } else {
                     // 未登录或登录已失效
                     _isLoggedIn.value = false
                     _userProfile.value = null
+                    clearUserPlaylists()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 _error.value = "获取登录状态失败: ${e.message}"
             }
         }
+    }
+
+    fun loadUserPlaylists(
+        isLoggedIn: Boolean = _isLoggedIn.value,
+        force: Boolean = false,
+    ) {
+        val uid = _userProfile.value?.userId
+        if (!isLoggedIn || uid == null || uid == 0L) {
+            clearUserPlaylists()
+            return
+        }
+
+        if (!force && lastLoadedUserPlaylistUid == uid && _userPlaylists.value.isNotEmpty()) {
+            return
+        }
+
+        viewModelScope.launch {
+            _userPlaylistsLoading.value = true
+            _userPlaylistsError.value = null
+            try {
+                val resp = profileApi.getUserPlaylist(uid = uid)
+                if (resp.code == 200) {
+                    _userPlaylists.value = resp.playlist.orEmpty()
+                    lastLoadedUserPlaylistUid = uid
+                } else {
+                    _userPlaylists.value = emptyList()
+                    _userPlaylistsError.value = "获取用户歌单失败: ${resp.code ?: "unknown"}"
+                }
+            } catch (e: Exception) {
+                _userPlaylists.value = emptyList()
+                _userPlaylistsError.value = e.message ?: "获取用户歌单失败"
+            } finally {
+                _userPlaylistsLoading.value = false
+            }
+        }
+    }
+
+    fun clearUserPlaylists() {
+        _userPlaylists.value = emptyList()
+        _userPlaylistsLoading.value = false
+        _userPlaylistsError.value = null
+        lastLoadedUserPlaylistUid = null
     }
 
     /**
@@ -278,6 +339,7 @@ class ProfileViewModel @Inject constructor(
 
             _userProfile.value = null
             _isLoggedIn.value = false
+            clearUserPlaylists()
         }
     }
 
