@@ -35,6 +35,8 @@ fun NavGraphBuilder.navigationBuilder(
     composable(ScreenRoute.Explore.route) {
         ExploreScreen(
             context = context,
+            navController = navController,
+            playerViewModel = playerViewModel,
         )
     }
     composable(ScreenRoute.Profile.route) {
@@ -90,6 +92,30 @@ fun NavGraphBuilder.navigationBuilder(
         SongCommentScreen(
             navController = navController,
             songId = songId,
+        )
+    }
+
+    // 内部 WebView
+    composable(
+        route = ScreenRoute.InAppWebView.route,
+        arguments = listOf(
+            navArgument("url") { type = NavType.StringType }
+        )
+    ) { backStackEntry ->
+        val url = backStackEntry.arguments?.getString("url")
+        InAppWebViewScreen(url = url)
+    }
+
+    composable(
+        route = ScreenRoute.PlaylistDetail.route,
+        arguments = listOf(
+            navArgument("playlistId") { type = NavType.LongType }
+        )
+    ) { backStackEntry ->
+        val playlistId = backStackEntry.arguments?.getLong("playlistId") ?: 0L
+        PlaylistDetailScreen(
+            playlistId = playlistId,
+            playerViewModel = playerViewModel,
         )
     }
 

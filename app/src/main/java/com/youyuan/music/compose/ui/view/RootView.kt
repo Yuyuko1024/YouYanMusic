@@ -236,6 +236,8 @@ fun RootView(
             currentRoute == ScreenRoute.RegisterPage.route -> stringResource(R.string.title_register)
             currentRoute?.startsWith("liked/") == true -> stringResource(R.string.title_my_liked)
             currentRoute?.startsWith("comments/") == true -> stringResource(R.string.comments_title)
+            currentRoute?.startsWith("playlist/") == true -> stringResource(R.string.title_playlist)
+            currentRoute == ScreenRoute.InAppWebView.route -> stringResource(R.string.title_webview)
             else -> stringResource(R.string.app_name)
         }
 
