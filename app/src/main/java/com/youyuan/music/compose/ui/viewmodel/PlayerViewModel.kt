@@ -12,11 +12,13 @@ import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.AlbumApi
 import com.youyuan.music.compose.api.apis.CommentApi
 import com.youyuan.music.compose.api.apis.LyricsApi
+import com.youyuan.music.compose.api.apis.SongLikeApi
 import com.youyuan.music.compose.api.apis.SongApi
 import com.youyuan.music.compose.api.apis.SongUrlApi
 import com.youyuan.music.compose.api.model.Artist
 import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.api.model.Song
+import com.youyuan.music.compose.data.PlaylistInvalidationBus
 import com.youyuan.music.compose.data.SongDetailPool
 import com.youyuan.music.compose.utils.Logger
 import com.youyuan.music.compose.utils.PlayerController
@@ -61,6 +63,7 @@ class PlayerViewModel @Inject constructor(
     private val apiClient: ApiClient,
     private val playerController: PlayerController,
     private val songDetailPool: SongDetailPool,
+    private val playlistInvalidationBus: PlaylistInvalidationBus,
 ) : ViewModel() {
     companion object {
         const val TAG = "PlayerViewModel"
@@ -71,6 +74,7 @@ class PlayerViewModel @Inject constructor(
     private val songApi: SongApi = apiClient.createService(SongApi::class.java)
     private val lyricsApi: LyricsApi = apiClient.createService(LyricsApi::class.java)
     private val commentApi: CommentApi = apiClient.createService(CommentApi::class.java)
+    private val songLikeApi: SongLikeApi = apiClient.createService(SongLikeApi::class.java)
 
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
@@ -109,6 +113,9 @@ class PlayerViewModel @Inject constructor(
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    private val _isCurrentSongLiked = MutableStateFlow(false)
+    val isCurrentSongLiked: StateFlow<Boolean> = _isCurrentSongLiked.asStateFlow()
 
     fun consumeError() {
         _error.value = null
@@ -202,6 +209,81 @@ class PlayerViewModel @Inject constructor(
         if (code == -462L) throw RiskControlException(message ?: "检测到您的网络环境存在风险，请稍后再试")
     }
 
+    private fun idsQueryJson(ids: List<Long>): String {
+        // 按文档：ids=[2058263032,1497529942]
+        return ids.joinToString(prefix = "[", postfix = "]")
+    }
+
+    fun refreshCurrentSongLiked(songId: Long?) {
+        if (songId == null) {
+            _isCurrentSongLiked.value = false
+            return
+        }
+        if (isRiskBlocked()) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val resp = songLikeApi.checkSongLike(ids = idsQueryJson(listOf(songId)))
+                val code = resp.code
+                if (code != null && code != 200) {
+                    // 未登录/失败时，不弹错；仅回退为未喜欢
+                    Logger.debug(TAG, "checkSongLike failed: code=$code")
+                    _isCurrentSongLiked.value = false
+                    return@launch
+                }
+                _isCurrentSongLiked.value = resp.likedIds().contains(songId)
+            } catch (e: Exception) {
+                if (e is RiskControlException) {
+                    enterRiskBlocked(e.message)
+                    return@launch
+                }
+                throwIfRisk(e)
+                Logger.debug(TAG, "checkSongLike error: ${e.message}")
+                _isCurrentSongLiked.value = false
+            }
+        }
+    }
+
+    fun toggleCurrentSongFavorite() {
+        val songId = _currentSong.value?.id
+        if (songId == null) {
+            _error.value = "当前没有正在播放的歌曲"
+            return
+        }
+        if (isRiskBlocked()) {
+            _error.value = "检测到您的网络环境存在风险，请稍后再试"
+            return
+        }
+
+        val targetLike = !_isCurrentSongLiked.value
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val resp = if (targetLike) {
+                    songLikeApi.likeSong(id = songId)
+                } else {
+                    songLikeApi.unlikeSong(id = songId)
+                }
+                val code = resp.code
+                if (code != null && code != 200) {
+                    _error.value = if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败"
+                    return@launch
+                }
+                _isCurrentSongLiked.value = targetLike
+
+                // /like 会返回 playlistId（对应“我喜欢的音乐”歌单）。通知相关页面强制刷新歌单详情。
+                resp.playlistId?.let { playlistInvalidationBus.invalidate(it) }
+            } catch (e: Exception) {
+                if (e is RiskControlException) {
+                    enterRiskBlocked(e.message)
+                    return@launch
+                }
+                throwIfRisk(e)
+                _error.value = (if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败") +
+                    (e.message?.let { ": $it" } ?: "")
+            }
+        }
+    }
+
     fun clearCommentCount() {
         _commentCount.value = 0
     }
@@ -264,6 +346,16 @@ class PlayerViewModel @Inject constructor(
                     _currentAlbumArtUrl.value = null
                 }
             }
+        }
+
+        // 当前歌曲变化时，刷新“是否已喜欢”的状态
+        viewModelScope.launch {
+            currentSong
+                .map { it?.id }
+                .distinctUntilChanged()
+                .collectLatest { songId ->
+                    refreshCurrentSongLiked(songId)
+                }
         }
 
         // 当前播放歌曲变化 -> 自动拉取歌词（lrc.lyric）

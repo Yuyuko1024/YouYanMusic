@@ -103,6 +103,7 @@ fun BottomSheetPlayer(
     // 当前Song对象
     val currentSong = playerViewModel.currentSong.collectAsState().value
     val currentSongId = currentSong?.id
+    val isFavorite by playerViewModel.isCurrentSongLiked.collectAsState(initial = false)
     // 封面
     val currentArtworkUrl = playerViewModel.currentAlbumArtUrl.collectAsState().value
     // 标题
@@ -403,20 +404,18 @@ fun BottomSheetPlayer(
                                                 // 收藏按钮
                                                 IconButton(
                                                     onClick = {
-                                                        // TODO: 添加收藏逻辑
-                                                        /*playerViewModel.toggleCurrentSongFavorite()*/
+                                                        playerViewModel.toggleCurrentSongFavorite()
                                                     },
                                                     modifier = Modifier.padding(4.dp)
                                                 ) {
                                                     Icon(
-                                                        /*painter = if (isFavorite) {
+                                                        painter = if (isFavorite) {
                                                             painterResource(id = R.drawable.ic_favorite)
                                                         } else {
                                                             painterResource(id = R.drawable.ic_favorite_border)
-                                                        },*/
-                                                        painter = painterResource(id = R.drawable.ic_favorite_border),
+                                                        },
                                                         contentDescription = "收藏",
-                                                        tint = Color.Unspecified // 使用默认颜色
+                                                        tint = if (isFavorite) Color(0xFFE53935) else LocalPlayerUIColor.current
                                                     )
                                                 }
                                                 // 评论按钮
