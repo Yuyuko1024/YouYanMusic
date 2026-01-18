@@ -2,7 +2,6 @@ package com.youyuan.music.compose.ui.screens
 
 import android.annotation.SuppressLint
 import android.content.Context
-import androidx.navigation.NavHostController
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,17 +11,18 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,16 +34,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.media3.common.util.UnstableApi
+import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
-import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.Text
+import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.api.model.BannerItem
 import com.youyuan.music.compose.api.model.PersonalFmSong
 import com.youyuan.music.compose.api.model.PersonalizedNewSongItem
@@ -52,9 +51,8 @@ import com.youyuan.music.compose.api.model.RecommendResourceItem
 import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.api.model.ToplistItem
 import com.youyuan.music.compose.ui.viewmodel.ExploreViewModel
-import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
-import com.youyuan.music.compose.utils.toSong
+import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 import kotlinx.coroutines.delay
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
