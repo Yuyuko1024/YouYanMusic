@@ -25,6 +25,10 @@ sealed class ScreenRoute(open val route: String) {
         fun createRoute(playlistId: Long): String = "playlist/$playlistId"
     }
 
+    object AlbumDetail : ScreenRoute("album/{albumId}") {
+        fun createRoute(albumId: Long): String = "album/$albumId"
+    }
+
 
     companion object {
         val MainScreens = listOf(

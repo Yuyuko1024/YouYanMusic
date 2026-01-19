@@ -10,6 +10,7 @@
     <string name="title_my_liked">我喜欢的音乐</string>
     <string name="title_webview">网页</string>
     <string name="title_playlist">歌单</string>
+    <string name="title_album">专辑</string>
 
     <!-- Drawer menu -->
     <string name="drawer_home">主页</string>
@@ -106,6 +107,7 @@
     <string name="comments_ip_location_format">IP属地：%1$s</string>
 
     <!-- Song Actions -->
+    <string name="song_action_album_name">专辑：</string>
     <string name="song_action_comments">评论</string>
     <string name="song_action_add_to_liked">加入我喜欢的音乐</string>
     <string name="song_action_remove_from_liked">从我喜欢的音乐移除</string>

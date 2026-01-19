@@ -75,6 +75,16 @@ fun SongActionSheetDialog(
         RoundedColumn {
             Item(
                 onClick = {
+                    song.albumId?.let { navController?.navigate(ScreenRoute.AlbumDetail.createRoute(it)) }
+                    dismiss()
+                },
+                text = "${stringResource(R.string.song_action_album_name)}${song.album}",
+                iconPainter = painterResource(R.drawable.ic_album_24px),
+                iconColor = SaltTheme.colors.highlight,
+            )
+
+            Item(
+                onClick = {
                     navController?.navigate(ScreenRoute.SongComments.createRoute(song.songId))
                     dismiss()
                 },
@@ -170,6 +180,7 @@ private fun SongActionHeader(
 
 data class SongActionInfo(
     val songId: Long,
+    val albumId: Long?,
     val title: String?,
     val artist: String?,
     val album: String?,
