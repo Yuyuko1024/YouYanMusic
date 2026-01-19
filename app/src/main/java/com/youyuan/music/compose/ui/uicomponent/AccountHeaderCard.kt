@@ -114,10 +114,10 @@ fun AccountHeaderCard(
                     }
                     Text(
                         text = if (profile != null) {
-                            if (!profile.signature.isNullOrBlank()) {
-                                profile.signature
-                            } else {
+                            if (profile.signature.isNullOrBlank()) {
                                 stringResource(R.string.bio_empty)
+                            } else {
+                                profile.signature
                             }
                         } else {
                             stringResource(R.string.click_to_login)

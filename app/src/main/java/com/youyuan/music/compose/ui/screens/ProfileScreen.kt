@@ -76,11 +76,13 @@ fun ProfileScreen(
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val uid = userProfile?.userId
-        val likedPlaylistId = if (isLoggedIn && uid != null) {
-            userPlaylists.firstOrNull { it.creator?.userId == uid && it.name == "我喜欢的音乐" }?.id
-        } else {
-            null
-        }
+        val likedPlaylistItem: UserPlaylistItem? = if (isLoggedIn && uid != null) {
+            userPlaylists.firstOrNull {
+                it.creator?.userId == uid && it.name == "${userProfile?.nickname}喜欢的音乐"
+            }
+        } else null
+
+        val likedPlaylistId = likedPlaylistItem?.id
 
         val createdPlaylists = if (isLoggedIn && uid != null) {
             userPlaylists.filter { it.creator?.userId == uid && it.id != likedPlaylistId }
@@ -96,6 +98,7 @@ fun ProfileScreen(
             refreshing = userPlaylistsLoading,
             onRefresh = {
                 if (isLoggedIn) {
+                    profileViewModel.getLoginStatus()
                     profileViewModel.loadUserPlaylists(isLoggedIn = true, force = true)
                 }
             },
@@ -151,6 +154,18 @@ fun ProfileScreen(
                                     onClick = { profileViewModel.loadUserPlaylists(isLoggedIn = true, force = true) }
                                 )
                             }
+                        }
+                    }
+
+                    // “我喜欢的音乐”单独展示：不加小标题，放在“创建的歌单”上方。
+                    likedPlaylistItem?.let { pl ->
+                        item(key = pl.id) {
+                            PlaylistCard(
+                                playlist = pl,
+                                onClick = {
+                                    navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
+                                }
+                            )
                         }
                     }
 

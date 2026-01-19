@@ -116,6 +116,7 @@ class ProfileViewModel @Inject constructor(
                 val nickname = tokenDataStore.nickname.first()
                 val avatarUrl = tokenDataStore.avatarUrl.first()
                 val backgroundUrl = tokenDataStore.backgroundUrl.first()
+                val signature = tokenDataStore.signature.first()
 
                 if (userId != null && !nickname.isNullOrEmpty()) {
                     // 有本地缓存，先显示缓存的用户信息
@@ -127,7 +128,7 @@ class ProfileViewModel @Inject constructor(
                         userType = null,
                         avatarImgId = null,
                         backgroundImgId = null,
-                        signature = null,
+                        signature = signature,
                         createTime = null,
                         userName = null,
                         birthday = null,
@@ -266,7 +267,8 @@ class ProfileViewModel @Inject constructor(
                         userId = profile.userId ?: 0L,
                         nickname = profile.nickname ?: "",
                         avatarUrl = profile.avatarUrl,
-                        backgroundUrl = profile.backgroundUrl
+                        backgroundUrl = profile.backgroundUrl,
+                        signature = profile.signature
                     )
 
                     // 登录成功后，拉取一次用户歌单（避免 UI 需要额外触发）
