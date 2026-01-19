@@ -25,7 +25,7 @@ data class AlbumSong(
     @SerializedName("noCopyrightRcmd")
     val noCopyrightRcmd: NoCopyrightRcmd? = null,
     @SerializedName("songJumpInfo")
-    val songJumpInfo: String? = null,
+    val songJumpInfo: Any? = null,
     @SerializedName("djId")
     val djId: Long? = null,
     @SerializedName("no")
@@ -82,6 +82,8 @@ data class AlbumSong(
     val name: String? = null,
     @SerializedName("id")
     val id: Long? = null,
+    @SerializedName("tns")
+    val tns: List<String>? = null,
     @SerializedName("privilege")
     val privilege: SongPrivilege? = null
 )
@@ -90,7 +92,9 @@ data class SongArtist(
     @SerializedName("id")
     val id: Long? = null,
     @SerializedName("name")
-    val name: String? = null
+    val name: String? = null,
+    @SerializedName("alia")
+    val alia: List<String>? = null
 )
 
 data class SongAlbum(

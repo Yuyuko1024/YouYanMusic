@@ -181,9 +181,10 @@ fun BottomSheetPlayer(
                 playerViewModel = playerViewModel,
                 song = SongActionInfo(
                     songId = songId,
-                    title = currentSong?.name,
+                    albumId = currentSong.album?.id,
+                    title = currentSong.name,
                     artist = artistName,
-                    album = currentSong?.album?.name,
+                    album = currentSong.album?.name,
                     artworkUrl = currentArtworkUrl,
                 ),
                 navController = navController,

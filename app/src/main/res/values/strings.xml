@@ -10,6 +10,7 @@
     <string name="title_my_liked">My liked music</string>
     <string name="title_webview">Web</string>
     <string name="title_playlist">Playlist</string>
+    <string name="title_album">Album</string>
 
     <!-- Drawer menu -->
     <string name="drawer_home">Home</string>
@@ -106,6 +107,7 @@
     <string name="comments_ip_location_format">IP: %1$s</string>
 
     <!-- Song Actions -->
+    <string name="song_action_album_name">Album: </string>
     <string name="song_action_comments">Comments</string>
     <string name="song_action_add_to_liked">Add to My Liked</string>
     <string name="song_action_remove_from_liked">Remove from My Liked</string>
