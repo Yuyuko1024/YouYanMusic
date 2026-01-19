@@ -96,6 +96,7 @@ fun NavGraphBuilder.navigationBuilder(
         PlaylistDetailScreen(
             playlistId = playlistId,
             playerViewModel = playerViewModel,
+            navController = navController
         )
     }
 

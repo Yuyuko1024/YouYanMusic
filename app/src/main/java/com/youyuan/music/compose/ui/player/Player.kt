@@ -63,6 +63,8 @@ import com.youyuan.music.compose.ui.uicomponent.ResizableIconButton
 import com.youyuan.music.compose.ui.uicomponent.flowing.FlowingLightBackground
 import com.youyuan.music.compose.ui.uicomponent.sheet.AudioQualitySheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.MusicFXSheetDialog
+import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
+import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.utils.PlayerForegroundColorLight
 import com.youyuan.music.compose.ui.utils.getPlayerUIColor
@@ -149,6 +151,9 @@ fun BottomSheetPlayer(
     // 音质对话框显示控制
     var showAudioQualityDialog by remember { mutableStateOf(false) }
 
+    // 歌曲操作对话框显示控制
+    var showSongActionDialog by remember { mutableStateOf(false) }
+
     // 显示均衡器对话框
     if (showEqualizerDialog) {
         MusicFXSheetDialog(
@@ -167,6 +172,27 @@ fun BottomSheetPlayer(
                 showAudioQualityDialog = false
             }
         )
+    }
+
+    if (showSongActionDialog) {
+        val songId = currentSongId
+        if (songId != null) {
+            SongActionSheetDialog(
+                playerViewModel = playerViewModel,
+                song = SongActionInfo(
+                    songId = songId,
+                    title = currentSong?.name,
+                    artist = artistName,
+                    album = currentSong?.album?.name,
+                    artworkUrl = currentArtworkUrl,
+                ),
+                navController = navController,
+                onDismissRequest = { showSongActionDialog = false },
+            )
+        } else {
+            // 没有歌曲就直接关闭
+            showSongActionDialog = false
+        }
     }
 
     // 播放器UI部分前景染色
@@ -653,21 +679,7 @@ fun BottomSheetPlayer(
 
                                             IconButton(
                                                 onClick = {
-                                                    /*coroutineScope.launch {
-                                                        currentPlaying?.let { mediaItem ->
-                                                            val songEntity = playerViewModel.getSongEntityByMediaItem(mediaItem)
-                                                            if (songEntity != null) {
-                                                                selectedSong = songEntity
-                                                                showActionDialog = true
-                                                            } else {
-                                                                Toast.makeText(
-                                                                    context,
-                                                                    "无法获取当前歌曲信息",
-                                                                    Toast.LENGTH_SHORT
-                                                                ).show()
-                                                            }
-                                                        }
-                                                    }*/
+                                                    showSongActionDialog = true
                                                 }
                                             ) {
                                                 Icon(

@@ -105,4 +105,9 @@
     <string name="comments_refresh">Refresh</string>
     <string name="comments_ip_location_format">IP: %1$s</string>
 
+    <!-- Song Actions -->
+    <string name="song_action_comments">Comments</string>
+    <string name="song_action_add_to_liked">Add to My Liked</string>
+    <string name="song_action_remove_from_liked">Remove from My Liked</string>
+
 </resources>
