@@ -28,6 +28,7 @@ import com.youyuan.music.compose.BuildConfig
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.SongUrlApi
+import com.youyuan.music.compose.pref.AudioQualityLevel
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
 import com.google.common.util.concurrent.Futures
@@ -44,6 +45,7 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import androidx.core.net.toUri
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @UnstableApi
 @AndroidEntryPoint
@@ -65,7 +67,11 @@ class MusicPlaybackService : MediaLibraryService() {
 
     private val songUrlApi: SongUrlApi by lazy { apiClient.createService(SongUrlApi::class.java) }
 
-    private val playUrlCache = ConcurrentHashMap<Long, String>()
+    // 需考虑音质：同一 songId 在不同 level 下 URL 不同
+    private val playUrlCache = ConcurrentHashMap<String, String>()
+
+    @Volatile
+    private var currentQualityLevel: String = AudioQualityLevel.default().level
 
     private var mediaLibrarySession: MediaLibrarySession? = null
     private var player: ExoPlayer? = null
@@ -82,6 +88,16 @@ class MusicPlaybackService : MediaLibraryService() {
     override fun onCreate() {
         super.onCreate()
         settingsDataStore = SettingsDataStore(this)
+
+        // 监听音质切换：更新解析档位并清空缓存
+        serviceScope.launch {
+            settingsDataStore.playerAudioQualityLevel
+                .distinctUntilChanged()
+                .collect { level ->
+                    currentQualityLevel = level
+                    playUrlCache.clear()
+                }
+        }
 
         initializePlayer()
         initializeSession()
@@ -106,11 +122,23 @@ class MusicPlaybackService : MediaLibraryService() {
             val songId = uri.pathSegments.firstOrNull()?.toLongOrNull()
                 ?: throw IOException("Invalid song placeholder uri: $uri")
 
-            val playUrl = playUrlCache[songId] ?: runBlocking {
-                val response = songUrlApi.getSongUrl(songIds = songId.toString())
+            val level = currentQualityLevel
+            val cacheKey = "$songId|$level"
+
+            val playUrl = playUrlCache[cacheKey] ?: runBlocking {
+                val response = songUrlApi.getSongUrl(songIds = songId.toString(), qualityLevel = level)
                 response.data?.firstOrNull()?.url
-            }?.also { resolved ->
-                if (resolved.isNotBlank()) playUrlCache[songId] = resolved
+            }?.takeIf { it.isNotBlank() }
+                ?: runBlocking {
+                    // 兜底：若所选档位拿不到 url，则回落到 standard，避免直接播放失败
+                    val response = songUrlApi.getSongUrl(
+                        songIds = songId.toString(),
+                        qualityLevel = AudioQualityLevel.STANDARD.level
+                    )
+                    response.data?.firstOrNull()?.url
+                }
+            playUrl?.takeIf { it.isNotBlank() }?.also { resolved ->
+                playUrlCache[cacheKey] = resolved
             }
 
             if (playUrl.isNullOrBlank()) {

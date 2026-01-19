@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -24,6 +25,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @UnstableApi
 @AndroidEntryPoint
 @ExperimentalFoundationApi
+@ExperimentalMaterialApi
 @ExperimentalMaterial3Api
 @UnstableSaltUiApi
 class MainActivity : ComponentActivity() {

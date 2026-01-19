@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -85,6 +86,7 @@ import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 @UnstableSaltUiApi
+@ExperimentalMaterialApi
 @ExperimentalMaterial3Api
 @ExperimentalFoundationApi
 fun RootView(
