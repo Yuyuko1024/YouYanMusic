@@ -18,6 +18,8 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        multiDexEnabled = true
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -32,7 +34,6 @@ android {
 
     buildTypes {
         release {
-            multiDexEnabled = true
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
