@@ -14,6 +14,8 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.datasource.cache.CacheDataSink
+import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
@@ -30,6 +32,7 @@ import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.youyuan.music.compose.utils.MediaCache
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +43,7 @@ import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
+import androidx.core.net.toUri
 
 @UnstableApi
 @AndroidEntryPoint
@@ -84,13 +88,18 @@ class MusicPlaybackService : MediaLibraryService() {
     }
 
     private fun initializePlayer() {
-        val upstreamFactory = DefaultDataSource.Factory(
-            this,
-            DefaultHttpDataSource.Factory()
-        )
+        val httpUpstreamFactory = DefaultHttpDataSource.Factory()
+
+        // Media3 Cache（LRU 1GB）：提高命中率，减少重复请求
+        val cache = MediaCache.get(this)
+        val cacheDataSourceFactory = CacheDataSource.Factory()
+            .setCache(cache)
+            .setUpstreamDataSourceFactory(httpUpstreamFactory)
+            .setCacheWriteDataSinkFactory(CacheDataSink.Factory().setCache(cache))
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 
         // 解析占位 URI：yym://song/{id} -> 真实播放 URL
-        val resolvingFactory = ResolvingDataSource.Factory(upstreamFactory) { dataSpec: DataSpec ->
+        val resolvingFactory = ResolvingDataSource.Factory(cacheDataSourceFactory) { dataSpec: DataSpec ->
             val uri = dataSpec.uri
             if (uri.scheme != "yym" || uri.host != "song") return@Factory dataSpec
 
@@ -109,7 +118,7 @@ class MusicPlaybackService : MediaLibraryService() {
             }
 
             dataSpec.buildUpon()
-                .setUri(Uri.parse(playUrl))
+                .setUri(playUrl.toUri())
                 .build()
         }
 
