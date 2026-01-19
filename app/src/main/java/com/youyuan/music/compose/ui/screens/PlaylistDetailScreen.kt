@@ -23,6 +23,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
+import androidx.navigation.NavController
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.moriafly.salt.ui.SaltTheme
@@ -44,6 +47,8 @@ import com.youyuan.music.compose.ui.viewmodel.PlaylistDetailViewModel
 import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
 import com.youyuan.music.compose.ui.uicomponent.TiltedPhotoWall
+import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
+import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
 
 @UnstableApi
 @UnstableSaltUiApi
@@ -53,9 +58,36 @@ import com.youyuan.music.compose.ui.uicomponent.TiltedPhotoWall
 fun PlaylistDetailScreen(
     playlistId: Long,
     modifier: Modifier = Modifier,
+    navController: NavController,
     playerViewModel: PlayerViewModel,
     viewModel: PlaylistDetailViewModel = hiltViewModel(),
 ) {
+    var showSongActionDialog by remember { mutableStateOf(false) }
+    var selectedSongForAction by remember { mutableStateOf<com.youyuan.music.compose.api.model.SongDetail?>(null) }
+
+    if (showSongActionDialog) {
+        val s = selectedSongForAction
+        if (s != null) {
+            SongActionSheetDialog(
+                playerViewModel = playerViewModel,
+                song = SongActionInfo(
+                    songId = s.id,
+                    title = s.name,
+                    artist = s.ar?.joinToString(", ") { it.name.orEmpty() }?.ifBlank { null },
+                    album = s.al?.name,
+                    artworkUrl = s.al?.picUrl,
+                ),
+                navController = navController,
+                onDismissRequest = {
+                    showSongActionDialog = false
+                    selectedSongForAction = null
+                }
+            )
+        } else {
+            showSongActionDialog = false
+        }
+    }
+
     val playlist by viewModel.playlist.collectAsState()
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -180,6 +212,10 @@ fun PlaylistDetailScreen(
                             if (song != null) {
                                 SongItem(
                                     song = song,
+                                    onMoreClick = {
+                                        selectedSongForAction = it
+                                        showSongActionDialog = true
+                                    },
                                     onClick = { songId ->
                                         // 把当前已加载的列表项写入对象池，供播放器复用/补全后反哺列表
                                         viewModel.putSongDetailsToPool(

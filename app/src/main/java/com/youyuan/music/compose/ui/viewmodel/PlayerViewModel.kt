@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -306,6 +307,82 @@ class PlayerViewModel @Inject constructor(
                 throwIfRisk(e)
                 _error.value = (if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败") +
                     (e.message?.let { ": $it" } ?: "")
+            }
+        }
+    }
+
+    /**
+     * 单次检查某首歌是否在“我喜欢的音乐”中。
+     * 返回 null 表示未登录/请求失败（不作为错误上抛）。
+     */
+    suspend fun checkSongLikedOnce(songId: Long): Boolean? {
+        if (isRiskBlocked()) return null
+        return try {
+            val resp = songLikeApi.checkSongLike(ids = idsQueryJson(listOf(songId)))
+            val code = resp.code
+            if (code != null && code != 200) {
+                Logger.debug(TAG, "checkSongLikedOnce failed: code=$code")
+                null
+            } else {
+                resp.likedIds().contains(songId)
+            }
+        } catch (e: Exception) {
+            if (e is RiskControlException) {
+                enterRiskBlocked(e.message)
+                return null
+            }
+            throwIfRisk(e)
+            Logger.debug(TAG, "checkSongLikedOnce error: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * 设置某首歌喜欢状态（加入/移除“我喜欢的音乐”）。
+     * onResult(true) 表示成功；失败会通过 error flow 给出提示。
+     */
+    fun setSongLiked(
+        songId: Long,
+        targetLike: Boolean,
+        onResult: ((Boolean) -> Unit)? = null,
+    ) {
+        if (isRiskBlocked()) {
+            _error.value = "检测到您的网络环境存在风险，请稍后再试"
+            onResult?.invoke(false)
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val resp = if (targetLike) {
+                    songLikeApi.likeSong(id = songId)
+                } else {
+                    songLikeApi.unlikeSong(id = songId)
+                }
+                val code = resp.code
+                if (code != null && code != 200) {
+                    _error.value = if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败"
+                    withContext(Dispatchers.Main) { onResult?.invoke(false) }
+                    return@launch
+                }
+
+                // 如果操作的是当前播放歌曲，同步更新 UI
+                if (_currentSong.value?.id == songId) {
+                    _isCurrentSongLiked.value = targetLike
+                }
+
+                resp.playlistId?.let { playlistInvalidationBus.invalidate(it) }
+                withContext(Dispatchers.Main) { onResult?.invoke(true) }
+            } catch (e: Exception) {
+                if (e is RiskControlException) {
+                    enterRiskBlocked(e.message)
+                    withContext(Dispatchers.Main) { onResult?.invoke(false) }
+                    return@launch
+                }
+                throwIfRisk(e)
+                _error.value = (if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败") +
+                    (e.message?.let { ": $it" } ?: "")
+                withContext(Dispatchers.Main) { onResult?.invoke(false) }
             }
         }
     }

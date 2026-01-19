@@ -105,4 +105,9 @@
     <string name="comments_refresh">刷新</string>
     <string name="comments_ip_location_format">IP属地：%1$s</string>
 
+    <!-- Song Actions -->
+    <string name="song_action_comments">评论</string>
+    <string name="song_action_add_to_liked">加入我喜欢的音乐</string>
+    <string name="song_action_remove_from_liked">从我喜欢的音乐移除</string>
+
 </resources>
