@@ -81,6 +81,14 @@
     <string name="playback_speed">Playback Speed</string>
     <string name="pitch_adjustment">Pitch Adjustment</string>
 
+    <!-- Audio Quality -->
+    <string name="audio_quality_title">Audio Quality</string>
+    <string name="audio_quality_current_format">Current: %1$s</string>
+    <string name="audio_quality_loading">Checking available qualities…</string>
+    <string name="audio_quality_item_selected_format">%1$s (Selected)</string>
+    <string name="audio_quality_hint_title">Note</string>
+    <string name="audio_quality_hint_text">Only qualities confirmed as available are shown. If a quality can’t be fetched, it may be hidden.</string>
+
     <!-- Common -->
     <string name="unknown_song">Unknown Song</string>
     <string name="unknown_artist">Unknown Artist</string>

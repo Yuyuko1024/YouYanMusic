@@ -56,10 +56,12 @@ import com.moriafly.salt.ui.pager.VerticalPager
 import com.moriafly.salt.ui.pager.rememberPagerState
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.constants.PlayerHorizontalPadding
+import com.youyuan.music.compose.pref.AudioQualityLevel
 import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.SettingsDataStore
 import com.youyuan.music.compose.ui.uicomponent.ResizableIconButton
 import com.youyuan.music.compose.ui.uicomponent.flowing.FlowingLightBackground
+import com.youyuan.music.compose.ui.uicomponent.sheet.AudioQualitySheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.MusicFXSheetDialog
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.utils.PlayerForegroundColorLight
@@ -144,12 +146,25 @@ fun BottomSheetPlayer(
     // 均衡器对话框显示控制
     var showEqualizerDialog by remember { mutableStateOf(false) }
 
+    // 音质对话框显示控制
+    var showAudioQualityDialog by remember { mutableStateOf(false) }
+
     // 显示均衡器对话框
     if (showEqualizerDialog) {
         MusicFXSheetDialog(
             playerViewModel = playerViewModel,
             onDismissRequest = {
                 showEqualizerDialog = false
+            }
+        )
+    }
+
+    // 显示音质对话框
+    if (showAudioQualityDialog) {
+        AudioQualitySheetDialog(
+            playerViewModel = playerViewModel,
+            onDismissRequest = {
+                showAudioQualityDialog = false
             }
         )
     }
@@ -614,6 +629,25 @@ fun BottomSheetPlayer(
                                                     contentDescription = "均衡器对话框",
                                                     tint = LocalPlayerUIColor.current,
                                                     modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+
+                                            val selectedLevelRaw = playerViewModel.selectedAudioQualityLevel.collectAsState().value
+                                            val selectedLevel = AudioQualityLevel.fromLevel(selectedLevelRaw)
+                                                ?: AudioQualityLevel.default()
+
+                                            IconButton(
+                                                onClick = {
+                                                    showAudioQualityDialog = true
+                                                },
+                                                modifier = Modifier.sizeIn(minWidth = 72.dp, minHeight = 48.dp)
+                                            ) {
+                                                Text(
+                                                    text = selectedLevel.displayName,
+                                                    style = SaltTheme.textStyles.sub,
+                                                    color = LocalPlayerUIColor.current,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
                                                 )
                                             }
 

@@ -3,6 +3,7 @@ package com.youyuan.music.compose.ui.screens
 import android.content.Context
 import androidx.annotation.OptIn
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.media3.common.util.UnstableApi
@@ -18,6 +19,7 @@ import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
 
 @OptIn(UnstableApi::class)
 @UnstableSaltUiApi
+@ExperimentalMaterialApi
 @ExperimentalMaterial3Api
 @ExperimentalFoundationApi
 fun NavGraphBuilder.navigationBuilder(

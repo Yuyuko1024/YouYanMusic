@@ -81,6 +81,14 @@
     <string name="playback_speed">播放速度</string>
     <string name="pitch_adjustment">音高调整</string>
 
+    <!-- Audio Quality -->
+    <string name="audio_quality_title">音质</string>
+    <string name="audio_quality_current_format">当前：%1$s</string>
+    <string name="audio_quality_loading">正在检测可用音质…</string>
+    <string name="audio_quality_item_selected_format">%1$s（已选）</string>
+    <string name="audio_quality_hint_title">说明</string>
+    <string name="audio_quality_hint_text">仅展示“已确认可用”的音质档位，避免切换后拿不到播放源。</string>
+
     <!-- Common -->
     <string name="unknown_song">未知歌曲</string>
     <string name="unknown_artist">未知艺术家</string>

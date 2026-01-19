@@ -24,6 +24,8 @@ import com.youyuan.music.compose.utils.Logger
 import com.youyuan.music.compose.utils.PlayerController
 import com.youyuan.music.compose.utils.PlayerPlaylistManager
 import com.youyuan.music.compose.utils.toSong
+import com.youyuan.music.compose.pref.AudioQualityLevel
+import com.youyuan.music.compose.pref.SettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -64,6 +66,7 @@ class PlayerViewModel @Inject constructor(
     private val playerController: PlayerController,
     private val songDetailPool: SongDetailPool,
     private val playlistInvalidationBus: PlaylistInvalidationBus,
+    private val settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
     companion object {
         const val TAG = "PlayerViewModel"
@@ -90,6 +93,29 @@ class PlayerViewModel @Inject constructor(
 
     private val _commentCount = MutableStateFlow(0)
     val commentCount: StateFlow<Int> = _commentCount.asStateFlow()
+
+    // === 音质选择（/song/url/v1 level） ===
+    val selectedAudioQualityLevel: StateFlow<String> = settingsDataStore.playerAudioQualityLevel
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AudioQualityLevel.default().level)
+
+    data class AudioQualityAvailability(
+        val requested: AudioQualityLevel,
+        val available: Boolean,
+        val actualLevel: String? = null,
+        val br: Long? = null,
+        val encodeType: String? = null,
+        val message: String? = null,
+    )
+
+    private val _audioQualityLoading = MutableStateFlow(false)
+    val audioQualityLoading: StateFlow<Boolean> = _audioQualityLoading.asStateFlow()
+
+    private val _audioQualityError = MutableStateFlow<String?>(null)
+    val audioQualityError: StateFlow<String?> = _audioQualityError.asStateFlow()
+
+    private val _availableAudioQualities = MutableStateFlow<List<AudioQualityAvailability>>(emptyList())
+    val availableAudioQualities: StateFlow<List<AudioQualityAvailability>> = _availableAudioQualities.asStateFlow()
 
     private val _currentArtists = MutableStateFlow<List<Artist>>(emptyList())
     val currentArtists: StateFlow<List<Artist>> = _currentArtists.asStateFlow()
@@ -873,7 +899,8 @@ class PlayerViewModel @Inject constructor(
     private suspend fun fetchSongUrl(songId: Long?): String? {
         if (songId == null) return null
         return try {
-            val response = songUrlApi.getSongUrl(songIds = songId.toString())
+            val level = selectedAudioQualityLevel.value.ifBlank { AudioQualityLevel.default().level }
+            val response = songUrlApi.getSongUrl(songIds = songId.toString(), qualityLevel = level)
             throwIfRiskCode(response.code)
             response.data?.firstOrNull()?.url
         } catch (e: Exception) {
@@ -883,6 +910,136 @@ class PlayerViewModel @Inject constructor(
             }
             throwIfRisk(e)
             null
+        }
+    }
+
+    fun refreshAvailableAudioQualities(songId: Long?) {
+        if (songId == null) {
+            _availableAudioQualities.value = emptyList()
+            _audioQualityError.value = null
+            _audioQualityLoading.value = false
+            return
+        }
+        if (_audioQualityLoading.value) return
+        if (isRiskBlocked()) {
+            _audioQualityError.value = "检测到您的网络环境存在风险，请稍后再试"
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.Default) {
+            _audioQualityLoading.value = true
+            _audioQualityError.value = null
+            try {
+                val candidates = AudioQualityLevel.probeOrder()
+                // 并发控制：避免一次弹窗打太多请求
+                val semaphore = Semaphore(permits = 3)
+                val results = coroutineScope {
+                    candidates.map { q ->
+                        async {
+                            semaphore.withPermit {
+                                try {
+                                    val resp = songUrlApi.getSongUrl(
+                                        songIds = songId.toString(),
+                                        qualityLevel = q.level
+                                    )
+                                    throwIfRiskCode(resp.code)
+                                    val item = resp.data?.firstOrNull()
+                                    val urlOk = !item?.url.isNullOrBlank()
+                                    val actual = item?.level
+                                    val available = urlOk && actual?.equals(q.level, ignoreCase = true) == true
+                                    AudioQualityAvailability(
+                                        requested = q,
+                                        available = available,
+                                        actualLevel = actual,
+                                        br = item?.br,
+                                        encodeType = item?.encodeType,
+                                        message = item?.message,
+                                    )
+                                } catch (e: Exception) {
+                                    if (e is RiskControlException) {
+                                        enterRiskBlocked(e.message)
+                                        throw e
+                                    }
+                                    throwIfRisk(e)
+                                    AudioQualityAvailability(
+                                        requested = q,
+                                        available = false,
+                                        actualLevel = null,
+                                        br = null,
+                                        encodeType = null,
+                                        message = e.message,
+                                    )
+                                }
+                            }
+                        }
+                    }.awaitAll()
+                }
+
+                // 过滤掉“显然不可用且没有任何信息”的项仍保留，让用户知道被探测过
+                _availableAudioQualities.value = results
+            } catch (e: Exception) {
+                _availableAudioQualities.value = emptyList()
+                _audioQualityError.value = e.message ?: "音质信息获取失败"
+            } finally {
+                _audioQualityLoading.value = false
+            }
+        }
+    }
+
+    fun applyAudioQualityToCurrentSong(level: AudioQualityLevel) {
+        val song = _currentSong.value ?: run {
+            _error.value = "当前没有正在播放的歌曲"
+            return
+        }
+        val songId = song.id ?: run {
+            _error.value = "歌曲 ID 无效"
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                // 再拉一次 URL 做“确认”：如果返回的 level 不是用户选择的，视为不可用
+                val resp = songUrlApi.getSongUrl(songIds = songId.toString(), qualityLevel = level.level)
+                throwIfRiskCode(resp.code)
+                val item = resp.data?.firstOrNull()
+                val url = item?.url
+                val actual = item?.level
+                if (url.isNullOrBlank()) {
+                    _error.value = "该歌曲在 ${level.displayName} 档位无可用播放源"
+                    return@launch
+                }
+                if (actual == null || !actual.equals(level.level, ignoreCase = true)) {
+                    _error.value = "该歌曲不支持 ${level.displayName}（回落到 ${actual ?: "未知"}）"
+                    return@launch
+                }
+
+                // 确认可用后再保存选择
+                settingsDataStore.setPlayerAudioQualityLevel(level.level)
+
+                // 更新当前播放列表项 url，并替换 MediaItem（尽量保持播放进度）
+                PlayerPlaylistManager.updatePlayUrlBySongId(songId, url)
+                val index = playerController.getCurrentMediaItemIndex()
+                val position = playerController.getCurrentPosition()
+                val wasPlaying = isPlaying.value
+
+                val mediaItem = PlayerPlaylistManager.buildMediaItem(
+                    song = song,
+                    playUrl = url,
+                    albumArtUrl = _currentAlbumArtUrl.value,
+                )
+                playerController.replaceMediaItemAt(index, mediaItem)
+                playerController.getPlayer()?.seekTo(index, position)
+                if (wasPlaying) {
+                    playerController.getPlayer()?.play()
+                }
+            } catch (e: Exception) {
+                if (e is RiskControlException) {
+                    enterRiskBlocked(e.message)
+                    return@launch
+                }
+                throwIfRisk(e)
+                _error.value = e.message ?: "切换音质失败"
+            }
         }
     }
 

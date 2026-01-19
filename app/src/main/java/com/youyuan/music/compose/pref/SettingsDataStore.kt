@@ -31,6 +31,9 @@ class SettingsDataStore(context: Context) {
 
         // 播放器行为
         val PLAYER_SEEK_TO_PREVIOUS_ACTION = intPreferencesKey("player_seek_to_previous_action")
+
+        // 播放器音质（/song/url/v1 的 level）
+        val PLAYER_AUDIO_QUALITY_LEVEL = stringPreferencesKey("player_audio_quality_level")
     }
 
     val appApiUrl: Flow<String> = dataStore.data
@@ -79,6 +82,11 @@ class SettingsDataStore(context: Context) {
             preferences[PLAYER_SEEK_TO_PREVIOUS_ACTION] ?: PlayerSeekToPreviousAction.DEFAULT.ordinal
         }
 
+    val playerAudioQualityLevel: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[PLAYER_AUDIO_QUALITY_LEVEL] ?: AudioQualityLevel.default().level
+        }
+
     suspend fun setAppApiUrl(url: String) {
         dataStore.edit { settings ->
             settings[APP_API_URL] = url
@@ -108,6 +116,12 @@ class SettingsDataStore(context: Context) {
     suspend fun setPlayerSeekToPreviousAction(action: PlayerSeekToPreviousAction) {
         dataStore.edit { settings ->
             settings[PLAYER_SEEK_TO_PREVIOUS_ACTION] = action.ordinal
+        }
+    }
+
+    suspend fun setPlayerAudioQualityLevel(level: String) {
+        dataStore.edit { settings ->
+            settings[PLAYER_AUDIO_QUALITY_LEVEL] = level
         }
     }
 
