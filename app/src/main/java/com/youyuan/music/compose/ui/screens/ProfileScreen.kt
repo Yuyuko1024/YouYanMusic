@@ -108,9 +108,8 @@ fun ProfileScreen(
         ) {
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 item {
                     AccountHeaderCard(
@@ -204,7 +203,7 @@ private fun PlaylistCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
