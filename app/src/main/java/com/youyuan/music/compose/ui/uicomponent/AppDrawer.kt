@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.RoundedColumn
 import com.moriafly.salt.ui.SaltTheme
@@ -103,8 +104,11 @@ private fun handleNavigation(
         menuItem.isMainScreen -> {
             // 导航到当前的主屏幕路由
             navController.navigate(currentMainScreenRoute) {
-                popUpTo(0) { inclusive = true }
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                }
                 launchSingleTop = true
+                restoreState = true
             }
         }
 

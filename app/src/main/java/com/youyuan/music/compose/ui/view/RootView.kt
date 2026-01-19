@@ -50,6 +50,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavHostController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -395,12 +396,11 @@ fun MainBottomBar(
                 onClick = {
                     if (currentRoute != screen.route) {
                         navController.navigate(screen.route) {
-                            // 弹出到导航图的起始位置（ID为0），并清空包括它在内的所有内容
-                            popUpTo(0) {
-                                inclusive = true
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
                             }
-                            // 确保在栈顶只有一个实例
                             launchSingleTop = true
+                            restoreState = true
                         }
                     }
                 },

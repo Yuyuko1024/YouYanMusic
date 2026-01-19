@@ -97,8 +97,91 @@ class ExploreViewModel @Inject constructor(
     private val _toplistsError = MutableStateFlow<String?>(null)
     val toplistsError: StateFlow<String?> = _toplistsError.asStateFlow()
 
+    // 避免“切页面/重组”造成重复请求：
+    // - public：不依赖登录的内容（banner/推荐歌单/新歌/榜单）
+    // - login：依赖登录态的内容（每日推荐/私人FM）
+    private var autoLoadedPublicKey: String? = null
+    private var autoLoadedLoginKey: String? = null
+
     fun onLoginStateChanged(isLoggedIn: Boolean) {
         if (!isLoggedIn) {
+            clearLoginOnlyContent()
+            autoLoadedLoginKey = null
+        }
+    }
+
+    fun clearAllContent() {
+        _banners.value = emptyList()
+        _bannerLoading.value = false
+        _bannerError.value = null
+
+        _personalizedPlaylists.value = emptyList()
+        _personalizedPlaylistsLoading.value = false
+        _personalizedPlaylistsError.value = null
+
+        _personalizedNewSongs.value = emptyList()
+        _personalizedNewSongsLoading.value = false
+        _personalizedNewSongsError.value = null
+
+        _toplists.value = emptyList()
+        _toplistsLoading.value = false
+        _toplistsError.value = null
+
+        clearLoginOnlyContent()
+
+        autoLoadedPublicKey = null
+        autoLoadedLoginKey = null
+    }
+
+    /**
+     * 冷启动自动加载（只执行一次/每个 baseUrlKey 一次）。
+     * baseUrlKey 用于区分 API endpoint（例如切换服务器后应重新拉取）。
+     */
+    fun ensureAutoLoaded(baseUrlKey: String, isLoggedIn: Boolean) {
+        if (baseUrlKey.isBlank()) return
+
+        // 若 endpoint 变化，先清空旧数据，避免 UI 展示“旧服务器的缓存”。
+        val currentKey = autoLoadedPublicKey
+        if (currentKey != null && currentKey != baseUrlKey) {
+            clearAllContent()
+        }
+
+        if (autoLoadedPublicKey != baseUrlKey) {
+            autoLoadedPublicKey = baseUrlKey
+            // 非 force：已有数据则各 loadXxx 会自行短路
+            loadBanner(type = 2, force = false)
+            loadPersonalizedPlaylists(limit = 10, force = false)
+            loadPersonalizedNewSongs(limit = 10, force = false)
+            loadToplistDetail(force = false)
+        }
+
+        if (isLoggedIn) {
+            if (autoLoadedLoginKey != baseUrlKey) {
+                autoLoadedLoginKey = baseUrlKey
+                loadDailyRecommendPlaylists(isLoggedIn = true, force = false)
+                loadDailyRecommendSongs(isLoggedIn = true, force = false)
+                loadPersonalFm(isLoggedIn = true, force = false)
+            }
+        } else {
+            // 未登录：确保登录态内容为空
+            clearLoginOnlyContent()
+            autoLoadedLoginKey = null
+        }
+    }
+
+    /**
+     * 用户手动刷新入口：显式 force=true。
+     */
+    fun refreshAll(isLoggedIn: Boolean) {
+        loadBanner(type = 2, force = true)
+        loadPersonalizedPlaylists(limit = 10, force = true)
+        loadPersonalizedNewSongs(limit = 10, force = true)
+        loadToplistDetail(force = true)
+        if (isLoggedIn) {
+            loadDailyRecommendPlaylists(isLoggedIn = true, force = true)
+            loadDailyRecommendSongs(isLoggedIn = true, force = true)
+            loadPersonalFm(isLoggedIn = true, force = true)
+        } else {
             clearLoginOnlyContent()
         }
     }
