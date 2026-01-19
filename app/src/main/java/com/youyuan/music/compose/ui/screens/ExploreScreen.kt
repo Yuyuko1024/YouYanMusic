@@ -23,6 +23,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,11 +56,13 @@ import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.api.model.ToplistItem
 import com.youyuan.music.compose.ui.viewmodel.ExploreViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
+import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 import kotlinx.coroutines.delay
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @ExperimentalFoundationApi
+@ExperimentalMaterialApi
 @ExperimentalMaterial3Api
 @UnstableSaltUiApi
 @UnstableApi
@@ -69,6 +75,9 @@ fun ExploreScreen(
     exploreViewModel: ExploreViewModel = hiltViewModel(),
     profileViewModel: ProfileViewModel = hiltViewModel(),
 ) {
+
+    val appConfigViewModel: AppConfigViewModel = hiltViewModel()
+    val effectiveApiUrl by appConfigViewModel.effectiveApiUrl.collectAsState()
 
     val isLoggedIn by profileViewModel.isLoggedIn.collectAsState()
 
@@ -100,23 +109,28 @@ fun ExploreScreen(
     val personalFmSongsLoading by exploreViewModel.personalFmSongsLoading.collectAsState()
     val personalFmSongsError by exploreViewModel.personalFmSongsError.collectAsState()
 
-    LaunchedEffect(Unit) {
-        exploreViewModel.loadBanner(type = 2)
-        exploreViewModel.loadPersonalizedPlaylists(limit = 10)
-        exploreViewModel.loadPersonalizedNewSongs(limit = 10)
-        exploreViewModel.loadToplistDetail()
-    }
-
-    LaunchedEffect(isLoggedIn) {
+    // 冷启动：在 API endpoint 生效后自动加载一次（避免切页面重复请求）
+    LaunchedEffect(effectiveApiUrl, isLoggedIn) {
         exploreViewModel.onLoginStateChanged(isLoggedIn)
-        if (isLoggedIn) {
-            exploreViewModel.loadDailyRecommendPlaylists(isLoggedIn = true)
-            exploreViewModel.loadDailyRecommendSongs(isLoggedIn = true)
-            exploreViewModel.loadPersonalFm(isLoggedIn = true)
-        }
+        exploreViewModel.ensureAutoLoaded(baseUrlKey = effectiveApiUrl, isLoggedIn = isLoggedIn)
     }
 
-    BoxWithConstraints(modifier.fillMaxSize()) {
+    val refreshing = bannerLoading ||
+        personalizedPlaylistsLoading ||
+        newSongsLoading ||
+        toplistsLoading ||
+        (isLoggedIn && (dailyRecommendPlaylistsLoading || dailyRecommendSongsLoading || personalFmSongsLoading))
+
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = refreshing,
+        onRefresh = { exploreViewModel.refreshAll(isLoggedIn = isLoggedIn) },
+    )
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .pullRefresh(pullRefreshState)
+    ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -260,6 +274,12 @@ fun ExploreScreen(
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
+
+        PullRefreshIndicator(
+            refreshing = refreshing,
+            state = pullRefreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 
 }
