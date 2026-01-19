@@ -536,6 +536,7 @@ private fun PlaylistCard(
             text = title ?: "",
             style = SaltTheme.textStyles.sub,
             color = SaltTheme.colors.text,
+            minLines = 2,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 120.dp)
@@ -761,7 +762,7 @@ private fun BannerSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(vertical = 12.dp)
     ) {
         when {
             loading && banners.isEmpty() -> {
