@@ -487,8 +487,8 @@ class PlayerViewModel @Inject constructor(
             throwIfRiskCode(response.code)
             if (response.code != 200) return@withContext null
 
-            val main = normalizeLrcText(response.lrc.lyric)
-            val translated = normalizeLrcText(response.tlyric.lyric)
+            val main = normalizeLrcText(response.lrc?.lyric)
+            val translated = normalizeLrcText(response.tlyric?.lyric)
 
             if (translated.isNullOrBlank()) return@withContext main
             if (main.isNullOrBlank()) return@withContext translated
