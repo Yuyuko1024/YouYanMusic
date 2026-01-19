@@ -52,6 +52,7 @@ fun SongItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick(song.id) }
     ) {
         Spacer(modifier = Modifier.padding(horizontal = 4.dp))
 
@@ -60,7 +61,6 @@ fun SongItem(
         Row(
             modifier = Modifier
                 .weight(1f)
-                .clickable { onClick(song.id) }
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
