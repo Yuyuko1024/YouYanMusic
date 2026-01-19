@@ -16,14 +16,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -33,10 +38,12 @@ import coil3.compose.AsyncImage
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.youyuan.music.compose.api.model.PlaylistCreator
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlaylistDetailViewModel
 import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
+import com.youyuan.music.compose.ui.uicomponent.TiltedPhotoWall
 
 @UnstableApi
 @UnstableSaltUiApi
@@ -63,7 +70,6 @@ fun PlaylistDetailScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 12.dp)
     ) {
         when {
             loading && playlist == null -> {
@@ -101,8 +107,42 @@ fun PlaylistDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     item {
+                        val coverUrlList by remember {
+                            derivedStateOf {
+                                lazyPagingItems.itemSnapshotList.items.map { it.al?.picUrl }
+                            }
+                        }
+
+                        Box(
+                            Modifier.fillMaxWidth().height(200.dp)
+                        ) {
+                            TiltedPhotoWall(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .matchParentSize(),
+                                imageUrls = coverUrlList
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .matchParentSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                SaltTheme.colors.background.copy(alpha = 0.2f),
+                                                SaltTheme.colors.background
+                                            )
+                                        )
+                                    )
+                            )
+                        }
+                    }
+
+                    item {
                         PlaylistHeader(
+                            modifier = modifier.padding(horizontal = 8.dp),
                             coverUrl = data.coverImgUrl,
+                            creator = data.creator,
                             name = data.name,
                             playCount = data.playCount,
                             trackCount = data.trackCount,
@@ -115,7 +155,7 @@ fun PlaylistDetailScreen(
                             text = "歌曲列表",
                             style = SaltTheme.textStyles.main,
                             color = SaltTheme.colors.text,
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
                         )
                     }
 
@@ -174,6 +214,7 @@ private fun PlaylistHeader(
     coverUrl: String?,
     name: String?,
     playCount: Long?,
+    creator: PlaylistCreator?,
     trackCount: Int?,
     description: String?,
     modifier: Modifier = Modifier,
@@ -219,6 +260,30 @@ private fun PlaylistHeader(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                }
+                if (creator != null) {
+                    Row {
+                        AsyncImage(
+                            model = creator.avatarUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .size(16.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .align(Alignment.CenterVertically)
+                        )
+                        creator.nickname?.let {
+                            Text(
+                                modifier = Modifier.padding(4.dp).align(Alignment.CenterVertically),
+                                text = it,
+                                color = SaltTheme.colors.subText,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
             }
         }

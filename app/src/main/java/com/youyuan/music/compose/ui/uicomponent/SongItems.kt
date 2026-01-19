@@ -39,6 +39,8 @@ fun SongItem(song: SongDetail, onClick: (Long) -> Unit = {}) {
             .fillMaxWidth()
             .clickable { onClick(song.id) }
     ) {
+        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+
         val artworkUri = song.al?.picUrl ?: R.drawable.ic_nav_music.toDrawable()
 
         AsyncImage(
@@ -49,8 +51,7 @@ fun SongItem(song: SongDetail, onClick: (Long) -> Unit = {}) {
                 .placeholder(R.drawable.ic_nav_music)
                 .build(),
             modifier = Modifier
-                .padding(vertical = 8.dp)
-                .padding(end = 8.dp)
+                .padding(8.dp)
                 .size(50.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .align(Alignment.CenterVertically),
