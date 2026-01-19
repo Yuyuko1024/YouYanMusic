@@ -22,6 +22,7 @@ class TokenDataStore(context: Context) {
         val NICKNAME = stringPreferencesKey("nickname")
         val AVATAR_URL = stringPreferencesKey("avatar_url")
         val BACKGROUND_URL = stringPreferencesKey("background_url")
+        val SIGNATURE = stringPreferencesKey("signature")
     }
 
     // Cookie
@@ -51,6 +52,11 @@ class TokenDataStore(context: Context) {
             preferences[BACKGROUND_URL]
         }
 
+    val signature: Flow<String?> = dataStore.data
+        .map { preferences ->
+            preferences[SIGNATURE]
+        }
+
     // 保存Cookie
     suspend fun saveAuthCookie(cookie: String) {
         dataStore.edit { settings ->
@@ -63,13 +69,15 @@ class TokenDataStore(context: Context) {
         userId: Long,
         nickname: String,
         avatarUrl: String?,
-        backgroundUrl: String?
+        backgroundUrl: String?,
+        signature: String?,
     ) {
         dataStore.edit { settings ->
             settings[USER_ID] = userId
             settings[NICKNAME] = nickname
             avatarUrl?.let { settings[AVATAR_URL] = it }
             backgroundUrl?.let { settings[BACKGROUND_URL] = it }
+            signature?.let { settings[SIGNATURE] = it }
         }
     }
 
@@ -81,6 +89,7 @@ class TokenDataStore(context: Context) {
             settings.remove(NICKNAME)
             settings.remove(AVATAR_URL)
             settings.remove(BACKGROUND_URL)
+            settings.remove(SIGNATURE)
         }
     }
 }
