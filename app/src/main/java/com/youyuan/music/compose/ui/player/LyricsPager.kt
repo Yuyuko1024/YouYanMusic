@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,8 +58,12 @@ import com.youyuan.music.compose.constants.PlayerHorizontalPadding
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.utils.Logger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @UnstableSaltUiApi
@@ -72,29 +77,43 @@ fun LyricsPager(
 ) {
     val lyrics = playerViewModel.lyrics.collectAsState().value
     val currentPlaying = playerViewModel.currentMediaItem.collectAsState().value
-    val currentPosition = playerViewModel.currentPosition.collectAsState().value
-    val isPlaying = playerViewModel.isPlaying.collectAsState().value
+    val currentPositionState = playerViewModel.currentPosition.collectAsState()
+    val isPlayingState = playerViewModel.isPlaying.collectAsState()
+    val durationState = playerViewModel.duration.collectAsState()
 
     val uiColor = LocalPlayerUIColor.current
 
+    // 缓存 AutoParser 实例
+    val autoParser = remember { AutoParser.Builder().build() }
     // 使用 remember 保存解析后的歌词，避免重复解析
     var parsedLyrics by remember { mutableStateOf<SyncedLyrics?>(null) }
     val listState = rememberLazyListState()
-    var animatedPosition by remember { mutableLongStateOf(0L) }
 
-    // 缓存 AutoParser 实例
-    val autoParser = remember { AutoParser.Builder().build() }
+    // 定义动画状态
+    val animatedPositionState = remember { mutableLongStateOf(0L) }
+    val currentPositionProvider = remember {
+        { animatedPositionState.longValue.toInt() }
+    }
 
-    // 获取最新的播放状态，用于平滑位置更新
-    val latestPosition by rememberUpdatedState(currentPosition)
+    var anchorState by remember { mutableStateOf(0L to 0L) }
 
-    val duration by playerViewModel.duration.collectAsState()
+    val currentPosition = currentPositionState.value
+    LaunchedEffect(currentPosition) {
+        anchorState = currentPosition to System.currentTimeMillis()
+
+        // 如果误差过大（比如拖动进度条、切歌），直接强制同步，不平滑过渡
+        if (abs(animatedPositionState.longValue - currentPosition) > 1000) {
+            animatedPositionState.longValue = currentPosition
+        }
+    }
 
     // 解析歌词
     LaunchedEffect(lyrics) {
         parsedLyrics = lyrics?.let {
             try {
-                autoParser.parse(it)
+                withContext(Dispatchers.Default) {
+                    autoParser.parse(it)
+                }
             } catch (e: Exception) {
                 Logger.err("LyricsPager", "解析歌词失败: ${e.message}")
                 null
@@ -103,29 +122,30 @@ fun LyricsPager(
         Logger.debug("LyricsPager", "解析歌词完成: ${parsedLyrics != null}")
     }
 
+    val isPlaying = isPlayingState.value
+    val latestDuration by rememberUpdatedState(durationState.value) // 始终获取最新时长
+
     // 平滑的位置更新动画
     LaunchedEffect(isPlaying) {
-        if (!isPlaying) {
-            animatedPosition = latestPosition
-            return@LaunchedEffect
-        }
+        if (isPlaying) {
+            while (isActive) {
+                // 获取当前的锚点信息
+                val (anchorPos, anchorTime) = anchorState
 
-        // 播放中：基于帧推进 animatedPosition；并在 seek/切歌导致跳变时快速同步
-        animatedPosition = latestPosition
-        var lastFrameTime = System.currentTimeMillis()
+                val elapsed = System.currentTimeMillis() - anchorTime
 
-        while (isActive) {
-            awaitFrame()
-            val now = System.currentTimeMillis()
-            val delta = (now - lastFrameTime).coerceAtLeast(0L)
-            lastFrameTime = now
+                val newPosition = (anchorPos + elapsed).coerceAtMost(latestDuration)
 
-            val diff = kotlin.math.abs(latestPosition - animatedPosition)
-            animatedPosition = if (diff > 1200L) {
-                latestPosition
-            } else {
-                (animatedPosition + delta).coerceAtMost(duration)
+                val currentAnimPos = animatedPositionState.longValue
+                if (currentAnimPos <= newPosition || abs(newPosition - currentAnimPos) >= 100) {
+                    animatedPositionState.longValue = newPosition
+                }
+                // 等待下一帧
+                awaitFrame()
             }
+        } else {
+            // 暂停状态下：直接同步真实进度
+            animatedPositionState.longValue = anchorState.first
         }
     }
 
@@ -153,7 +173,7 @@ fun LyricsPager(
                     KaraokeLyricsView(
                         listState = listState,
                         lyrics = syncedLyrics,
-                        currentPosition = animatedPosition,
+                        currentPosition = { currentPositionProvider() },
                         onLineClicked = { line ->
                             playerViewModel.seekTo(line.start.toLong())
                         },

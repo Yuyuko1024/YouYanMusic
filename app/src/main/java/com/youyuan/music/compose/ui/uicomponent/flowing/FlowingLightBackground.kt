@@ -80,9 +80,17 @@ fun FlowingLightBackground(
     val rotation1Value = infiniteTransition1.value
     val rotation2Value = infiniteTransition2.value
 
+    var stableImageUrl by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(imageUrl) {
+        if (imageUrl != stableImageUrl) {
+            // 延迟 200ms，如果用户在狂点下一首，这里会取消前一次任务
+            kotlinx.coroutines.delay(200)
+            stableImageUrl = imageUrl
+        }
+    }
 
     // 加载和处理图片
-    LaunchedEffect(imageUrl) {
+    LaunchedEffect(stableImageUrl) {
         if (imageUrl != null) {
             try {
                 val bitmap = processor.loadAndProcessImage(imageUrl)?.asImageBitmap()
@@ -129,19 +137,17 @@ fun FlowingLightBackground(
                 .fillMaxSize()
                 .graphicsLayer(clip = true)
         ) {
-            val baseModifier = Modifier.scale(3f)
+            val baseModifier = Modifier.fillMaxSize().scale(3f)
 
             CompatBlurImage(
                 bitmap = processedBitmap!!,
                 contentDescription = null,
                 colorFilter = colorFilter,
                 modifier = baseModifier
-                    .scale(0.9f)
                     .align(Alignment.TopStart)
                     .graphicsLayer {
                         rotationZ = rotation1Value
-                    },
-                blurRadius = 80.dp
+                    }
             )
 
             CompatBlurImage(
@@ -149,12 +155,10 @@ fun FlowingLightBackground(
                 contentDescription = null,
                 colorFilter = colorFilter,
                 modifier = baseModifier
-                    .scale(0.9f)
                     .align(Alignment.TopEnd)
                     .graphicsLayer {
                         rotationZ = rotation1Value
-                    },
-                blurRadius = 80.dp
+                    }
             )
 
             CompatBlurImage(
@@ -162,12 +166,10 @@ fun FlowingLightBackground(
                 contentDescription = null,
                 colorFilter = colorFilter,
                 modifier = baseModifier
-                    .scale(0.9f)
                     .align(Alignment.BottomEnd)
                     .graphicsLayer {
                         rotationZ = rotation2Value
-                    },
-                blurRadius = 80.dp
+                    }
             )
 
             CompatBlurImage(
@@ -175,12 +177,10 @@ fun FlowingLightBackground(
                 contentDescription = null,
                 colorFilter = colorFilter,
                 modifier = baseModifier
-                    .scale(0.9f)
                     .align(Alignment.BottomStart)
                     .graphicsLayer {
                         rotationZ = rotation1Value
-                    },
-                blurRadius = 80.dp
+                    }
             )
 
             CompatBlurImage(
@@ -188,12 +188,10 @@ fun FlowingLightBackground(
                 contentDescription = null,
                 colorFilter = colorFilter,
                 modifier = baseModifier
-                    .scale(0.7f)
                     .align(Alignment.Center)
                     .graphicsLayer {
                         rotationZ = rotation2Value
-                    },
-                blurRadius = 80.dp
+                    }
             )
 
             // 覆盖一层深色的半透明前景，提升对比度
