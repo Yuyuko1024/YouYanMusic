@@ -31,17 +31,17 @@ class FlowingLightProcessor(private val context: Context) {
 
     suspend fun loadAndProcessImage(imageUrl: String?): Bitmap? = withContext(Dispatchers.IO) {
         try {
+            // 降低 Coil 加载的原始尺寸，避免加载几千像素的大图，极度节省内存
+            val request = ImageRequest.Builder(context)
+                .data(imageUrl ?: Uri.EMPTY)
+                .allowHardware(false)
+                .size(200) // 限制加载尺寸，流光溢彩不需要原图
+                .crossfade(true)
+                .build()
+
             Logger.debug("FlowingLightProcessor", "Loading image from http URL: $imageUrl")
-            return@withContext (
-                    ImageLoader(context)
-                        .execute(
-                            ImageRequest.Builder(context)
-                                .data(imageUrl ?: Uri.EMPTY)
-                                .allowHardware(false)
-                                .crossfade(true)
-                                .build(),
-                        ).image as? BitmapImage
-                    )?.bitmap?.let { processBitmap(it) }
+            return@withContext (ImageLoader(context).execute(request).image as? BitmapImage)
+                ?.bitmap?.let { processBitmap(it) }
         } catch (e: Exception) {
             e.printStackTrace()
             null
@@ -51,9 +51,10 @@ class FlowingLightProcessor(private val context: Context) {
     suspend fun processBitmap(bitmap: Bitmap): Bitmap = withContext(Dispatchers.Default) {
         // 1. 将图片缩小到合适尺寸，保持比例
         val aspectRatio = bitmap.height.toFloat() / bitmap.width.toFloat()
-        val targetHeight = (300 * aspectRatio).toInt()
+        val targetHeight = (60 * aspectRatio).toInt().coerceAtLeast(10)
 
-        val resized = bitmap.zoom(300f, targetHeight.toFloat())
+        // 初始缩放
+        val resized = bitmap.zoom(60f, targetHeight.toFloat())
 
         // 2. 增加饱和度
         val saturated = resized.handleImageEffect(1.8f)
@@ -61,29 +62,27 @@ class FlowingLightProcessor(private val context: Context) {
         // 3. 根据亮度调整处理参数，应用Apple Music的mesh效果
         val brightness = saturated.brightness()
 
-        when {
+        // 中间处理结果
+        val meshed = when {
             brightness < 0.3f -> {
-                // 暗色调处理
                 saturated
-                    .blur(15f)
-                    .zoom(600f, (targetHeight * 2).toFloat())
-                    .blur(10f)
+                    .blur(18f) // 降低模糊半径，因为图片变小了，相对模糊度其实很大
+                    .zoom(280f, (targetHeight * 2).toFloat())
             }
             brightness > 0.7f -> {
-                // 亮色调处理 - 应用mesh变形
                 saturated
-                    .blur(20f)
+                    .blur(30f)
                     .mesh(meshFloats)
-                    .zoom(580f, (targetHeight * 1.9f))
-                    .blur(8f)
+                    .zoom(260f, (targetHeight * 1.9f))
             }
             else -> {
-                // 中等亮度处理
                 saturated
-                    .blur(18f)
-                    .zoom(590f, (targetHeight * 1.95f))
-                    .blur(12f)
+                    .blur(9f)
+                    .zoom(118f, (targetHeight * 1.95f))
             }
         }
+
+        val finalResult = meshed.blur(20f)
+        finalResult
     }
 }

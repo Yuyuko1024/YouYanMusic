@@ -28,7 +28,7 @@ fun CompatBlurImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     alignment: Alignment = Alignment.Center,
-    contentScale: ContentScale = ContentScale.Fit,
+    contentScale: ContentScale = ContentScale.Crop,
     blurRadius: Dp = 0.dp,
     alpha: Float = DefaultAlpha,
     colorFilter: ColorFilter? = null,
