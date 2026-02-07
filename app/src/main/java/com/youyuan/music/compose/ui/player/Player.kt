@@ -656,99 +656,63 @@ private fun PlayerControlsSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp, horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterVertically)
-            ) {
-                val iconRes = when {
-                    shuffleModeEnabled -> R.drawable.ic_shuffle_one
-                    repeatMode == Player.REPEAT_MODE_ONE -> R.drawable.ic_play_once
-                    else -> R.drawable.ic_play_cycle
-                }
-                ResizableIconButton(
-                    icon = iconRes,
-                    color = LocalPlayerUIColor.current,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .padding(4.dp)
-                        .align(Alignment.Center),
-                    onClick = onToggleLoopMode
-                )
+            val loopIconRes = when {
+                shuffleModeEnabled -> R.drawable.ic_shuffle_one
+                repeatMode == Player.REPEAT_MODE_ONE -> R.drawable.ic_play_once
+                else -> R.drawable.ic_play_cycle
             }
 
-            Row(Modifier.fillMaxWidth().weight(1f)) {
-                Box(
-                    modifier = Modifier
-                    .weight(1f)
-                    .align(Alignment.CenterVertically)
-                ) {
-                    ResizableIconButton(
-                        icon = FeatherIcons.SkipBack,
-                        color = LocalPlayerUIColor.current,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .padding(4.dp)
-                            .align(Alignment.Center),
-                        onClick = onSkipToPrevious
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .align(Alignment.CenterVertically)
-                ) {
-                    ResizableIconButton(
-                        icon = if (isPlaying) {
-                            TablerIcons.PlayerPause
-                        } else {
-                            TablerIcons.PlayerPlay
-                        },
-                        color = LocalPlayerUIColor.current,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .align(Alignment.Center),
-                        onClick = onTogglePlayPause,
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .align(Alignment.CenterVertically)
-                ) {
-                    ResizableIconButton(
-                        icon = FeatherIcons.SkipForward,
-                        color = LocalPlayerUIColor.current,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .padding(4.dp)
-                            .align(Alignment.Center),
-                        onClick = onSkipToNext
-                    )
-                }
-            }
-
-            Box(
+            ResizableIconButton(
+                icon = loopIconRes,
+                color = LocalPlayerUIColor.current,
                 modifier = Modifier
-                    .align(Alignment.CenterVertically)
-            ) {
-                ResizableIconButton(
-                    icon = TablerIcons.Playlist,
-                    color = LocalPlayerUIColor.current,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .padding(4.dp)
-                        .align(Alignment.Center),
-                    onClick = {
-                        coroutineScope.launch {
-                            verticalPagerState.animateScrollToPage(1)
-                        }
+                    .size(34.dp)
+                    .padding(4.dp),
+                onClick = onToggleLoopMode,
+            )
+
+            ResizableIconButton(
+                icon = FeatherIcons.SkipBack,
+                color = LocalPlayerUIColor.current,
+                modifier = Modifier
+                    .size(34.dp)
+                    .padding(4.dp),
+                onClick = onSkipToPrevious,
+            )
+
+            ResizableIconButton(
+                icon = if (isPlaying) TablerIcons.PlayerPause else TablerIcons.PlayerPlay,
+                color = LocalPlayerUIColor.current,
+                modifier = Modifier
+                    .size(42.dp)
+                    .padding(4.dp),
+                onClick = onTogglePlayPause,
+            )
+
+            ResizableIconButton(
+                icon = FeatherIcons.SkipForward,
+                color = LocalPlayerUIColor.current,
+                modifier = Modifier
+                    .size(34.dp)
+                    .padding(4.dp),
+                onClick = onSkipToNext,
+            )
+
+            ResizableIconButton(
+                icon = TablerIcons.Playlist,
+                color = LocalPlayerUIColor.current,
+                modifier = Modifier
+                    .size(34.dp)
+                    .padding(4.dp),
+                onClick = {
+                    coroutineScope.launch {
+                        verticalPagerState.animateScrollToPage(1)
                     }
-                )
-            }
+                },
+            )
         }
 
         Row(
