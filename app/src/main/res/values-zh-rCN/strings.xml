@@ -11,6 +11,7 @@
     <string name="title_webview">网页</string>
     <string name="title_playlist">歌单</string>
     <string name="title_album">专辑</string>
+    <string name="title_artist">歌手</string>
 
     <!-- Drawer menu -->
     <string name="drawer_home">主页</string>
@@ -108,8 +109,17 @@
 
     <!-- Song Actions -->
     <string name="song_action_album_name">专辑：</string>
+    <string name="song_action_artist_name">歌手：</string>
     <string name="song_action_comments">评论</string>
     <string name="song_action_add_to_liked">加入我喜欢的音乐</string>
     <string name="song_action_remove_from_liked">从我喜欢的音乐移除</string>
+
+    <!-- Artist -->
+    <string name="artist_hot_songs">热门歌曲</string>
+    <string name="artist_albums">专辑</string>
+    <string name="artist_songs_count">%1$s 首歌曲</string>
+    <string name="artist_albums_count">%1$s 张专辑</string>
+    <string name="artist_no_songs">无歌曲</string>
+    <string name="artist_no_albums">无专辑</string>
 
 </resources>

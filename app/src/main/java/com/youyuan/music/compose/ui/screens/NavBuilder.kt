@@ -114,4 +114,18 @@ fun NavGraphBuilder.navigationBuilder(
         )
     }
 
+    composable(
+        route = ScreenRoute.ArtistDetail.route,
+        arguments = listOf(
+            navArgument("artistId") { type = NavType.LongType }
+        )
+    ) { backStackEntry ->
+        val artistId = backStackEntry.arguments?.getLong("artistId") ?: 0L
+        ArtistScreen(
+            artistId = artistId,
+            navController = navController,
+            playerViewModel = playerViewModel,
+        )
+    }
+
 }

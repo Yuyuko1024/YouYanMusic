@@ -49,6 +49,7 @@ import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
 import com.youyuan.music.compose.ui.uicomponent.TiltedPhotoWall
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
+import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
 
 @UnstableApi
 @UnstableSaltUiApi
@@ -77,6 +78,7 @@ fun PlaylistDetailScreen(
                     artist = s.ar?.joinToString(", ") { it.name.orEmpty() }?.ifBlank { null },
                     album = s.al?.name,
                     artworkUrl = s.al?.picUrl,
+                    artists = s.ar.orEmpty().map { SongActionArtist(artistId = it.id, name = it.name) },
                 ),
                 navController = navController,
                 onDismissRequest = {

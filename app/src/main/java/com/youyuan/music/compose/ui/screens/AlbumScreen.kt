@@ -47,6 +47,7 @@ import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
+import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
 import com.youyuan.music.compose.ui.viewmodel.AlbumDetailViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import java.text.SimpleDateFormat
@@ -80,6 +81,7 @@ fun AlbumScreen(
                     artist = s.ar?.joinToString(", ") { it.name.orEmpty() }?.ifBlank { null },
                     album = s.al?.name,
                     artworkUrl = s.al?.picUrl,
+                    artists = s.ar.orEmpty().map { SongActionArtist(artistId = it.id, name = it.name) },
                 ),
                 navController = navController,
                 onDismissRequest = {
