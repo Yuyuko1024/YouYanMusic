@@ -61,6 +61,8 @@ class AlbumDetailViewModel @Inject constructor(
 
     private fun AlbumSong.toSongDetail(albumDetail: AlbumDetail?): SongDetail {
         val coverUrl = albumDetail?.picUrl
+        val songAlias = alia?.map { it } ?: emptyList()
+        val songTranslations = tns?.map { it } ?: emptyList()
         return SongDetail(
             name = name,
             id = id ?: 0L,
@@ -73,9 +75,11 @@ class AlbumDetailViewModel @Inject constructor(
                 name = al?.name ?: albumDetail?.name,
                 picUrl = coverUrl,
             ),
+            alia = songAlias,
             dt = dt,
             fee = fee?.toInt(),
             mv = mv,
+            tns = songTranslations,
         )
     }
 }

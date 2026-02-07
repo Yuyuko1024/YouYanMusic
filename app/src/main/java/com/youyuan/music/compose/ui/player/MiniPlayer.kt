@@ -65,7 +65,20 @@ fun MiniPlayer(
     // 封面
     val currentArtworkUrl = playerViewModel.currentAlbumArtUrl.collectAsState().value
     // 标题
-    val title = currentSong?.name ?: stringResource(R.string.unknown_song)
+    fun List<String?>?.toDisplayText(): String? =
+        this
+            .orEmpty()
+            .asSequence()
+            .mapNotNull { it?.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .joinToString(" / ")
+            .takeIf { it.isNotBlank() }
+
+    val baseTitle = currentSong?.name ?: stringResource(R.string.unknown_song)
+    val aliasText = currentSong?.alia.toDisplayText()
+        ?: currentSong?.tns.toDisplayText()
+    val title = if (aliasText != null) "$baseTitle（$aliasText）" else baseTitle
     // 艺术家
     val artistName = playerViewModel.currentArtistNames.collectAsState().value
 

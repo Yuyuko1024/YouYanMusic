@@ -23,7 +23,7 @@ import com.youyuan.music.compose.data.SongDetailPool
 import com.youyuan.music.compose.utils.Logger
 import com.youyuan.music.compose.utils.PlayerController
 import com.youyuan.music.compose.utils.PlayerPlaylistManager
-import com.youyuan.music.compose.utils.toSong
+import com.youyuan.music.compose.utils.toSongDetail
 import com.youyuan.music.compose.pref.AudioQualityLevel
 import com.youyuan.music.compose.pref.SettingsDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -80,8 +80,8 @@ class PlayerViewModel @Inject constructor(
     private val commentApi: CommentApi = apiClient.createService(CommentApi::class.java)
     private val songLikeApi: SongLikeApi = apiClient.createService(SongLikeApi::class.java)
 
-    private val _currentSong = MutableStateFlow<Song?>(null)
-    val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
+    private val _currentSong = MutableStateFlow<SongDetail?>(null)
+    val currentSong: StateFlow<SongDetail?> = _currentSong.asStateFlow()
 
     private val _currentSongIndex = MutableStateFlow(0)
     val currentSongIndex: StateFlow<Int> = _currentSongIndex.asStateFlow()
@@ -438,7 +438,11 @@ class PlayerViewModel @Inject constructor(
                 _currentSongIndex.value = index
                 if (item != null) {
                     _currentSong.value = item.song
-                    _currentArtists.value = item.song.artists ?: emptyList()
+                    _currentArtists.value = item.song.ar
+                        ?.map { ar ->
+                            Artist(id = ar.id, name = ar.name)
+                        }
+                        ?: emptyList()
                     _currentSongUrl.value = item.playUrl
                     _currentAlbumArtUrl.value = item.albumArtUrl
                 } else {
@@ -641,10 +645,11 @@ class PlayerViewModel @Inject constructor(
             onPlayerThread {
                 _loadedSongIds.clear()
                 _preparedItemCache.clear()
-                items.forEach { it.song.id?.let { id ->
+                items.forEach { item ->
+                    val id = item.song.id
                     _loadedSongIds.add(id)
-                    _preparedItemCache[id] = it
-                } }
+                    _preparedItemCache[id] = item
+                }
 
                 PlayerPlaylistManager.setPlaylist(items)
                 PlayerPlaylistManager.setCurrentIndex(startIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0)))
@@ -667,9 +672,9 @@ class PlayerViewModel @Inject constructor(
         playlistMutationMutex.withLock {
             if (!isCurrentBuildSession(sessionId)) return
             onPlayerThread {
-                val commitItems = newItems.filter { it.song.id != null && _loadedSongIds.add(it.song.id!!) }
+                val commitItems = newItems.filter { _loadedSongIds.add(it.song.id) }
                 if (commitItems.isEmpty()) return@onPlayerThread
-                commitItems.forEach { it.song.id?.let { id -> _preparedItemCache[id] = it } }
+                commitItems.forEach { item -> _preparedItemCache[item.song.id] = item }
 
                 PlayerPlaylistManager.addItems(commitItems)
                 playerController.addMediaItems(commitItems.map { it.toMediaItemSafe() })
@@ -688,9 +693,9 @@ class PlayerViewModel @Inject constructor(
         playlistMutationMutex.withLock {
             if (!isCurrentBuildSession(sessionId)) return
             onPlayerThread {
-                val commitItems = newItems.filter { it.song.id != null && _loadedSongIds.add(it.song.id!!) }
+                val commitItems = newItems.filter { _loadedSongIds.add(it.song.id) }
                 if (commitItems.isEmpty()) return@onPlayerThread
-                commitItems.forEach { it.song.id?.let { id -> _preparedItemCache[id] = it } }
+                commitItems.forEach { item -> _preparedItemCache[item.song.id] = item }
 
                 PlayerPlaylistManager.addItemsAt(index, commitItems)
                 playerController.addMediaItems(index, commitItems.map { it.toMediaItemSafe() })
@@ -703,7 +708,7 @@ class PlayerViewModel @Inject constructor(
         desiredIndex: Int,
         item: PlayerPlaylistManager.PlaylistItem,
     ) {
-        val songId = item.song.id ?: return
+        val songId = item.song.id
         if (!isCurrentBuildSession(sessionId)) return
 
         playlistMutationMutex.withLock {
@@ -933,8 +938,13 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun playSong(song: Song) {
-        _currentSong.value = song
-        _currentArtists.value = song.artists ?: emptyList()
+        val songDetail = song.toSongDetail()
+        _currentSong.value = songDetail
+        _currentArtists.value = songDetail.ar
+            ?.map { ar ->
+                Artist(id = ar.id, name = ar.name)
+            }
+            ?: emptyList()
 
         val existingIndex = PlayerPlaylistManager.findSongIndex(song.id)
         if (existingIndex != -1) {
@@ -948,17 +958,17 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val playUrl = fetchSongUrl(song.id)
-                val albumArtUrl = fetchAlbumArt(song.album?.id)
+                val albumArtUrl = fetchAlbumArt(songDetail.al?.id ?: song.album?.id)
 
                 if (playUrl != null) {
                     _currentSongUrl.value = playUrl
                     _currentAlbumArtUrl.value = albumArtUrl
 
-                    PlayerPlaylistManager.addItem(song, playUrl, albumArtUrl)
+                    PlayerPlaylistManager.addItem(songDetail, playUrl, albumArtUrl)
                     val newIndex = PlayerPlaylistManager.playlist.value.size - 1
                     PlayerPlaylistManager.setCurrentIndex(newIndex)
 
-                    val mediaItem = PlayerPlaylistManager.buildMediaItem(song, playUrl, albumArtUrl)
+                    val mediaItem = PlayerPlaylistManager.buildMediaItem(songDetail, playUrl, albumArtUrl)
                     playerController.addAndPlay(mediaItem)
                 } else {
                     _error.value = "无法获取歌曲播放链接"
@@ -1068,10 +1078,7 @@ class PlayerViewModel @Inject constructor(
             _error.value = "当前没有正在播放的歌曲"
             return
         }
-        val songId = song.id ?: run {
-            _error.value = "歌曲 ID 无效"
-            return
-        }
+        val songId = song.id
 
         viewModelScope.launch {
             try {
@@ -1196,7 +1203,7 @@ class PlayerViewModel @Inject constructor(
 
                 // 1) 目标歌曲优先：先插入无 URL 的占位 Item，URL 在真正播放时再加载
                 val targetItem = buildPlaylistItemsByIds(listOf(targetSongId)).firstOrNull()
-                    ?: PlayerPlaylistManager.PlaylistItem(song = Song(id = targetSongId), playUrl = null, albumArtUrl = null)
+                    ?: PlayerPlaylistManager.PlaylistItem(song = placeholderSongDetail(targetSongId), playUrl = null, albumArtUrl = null)
 
                 // 占位 URI 会在 Service 的 DataSource 中解析为真实 URL
                 commitSetPlaylist(sessionId, listOf(targetItem), startIndex = 0, startPlay = true)
@@ -1292,7 +1299,7 @@ class PlayerViewModel @Inject constructor(
         // 2) 严格按 ids 顺序组装 Item，保证最终播放列表顺序正确
         for (id in missing) {
             val detail = detailsById[id]
-            val song = detail?.toSong() ?: Song(id = id)
+            val song = detail ?: placeholderSongDetail(id)
             val albumArtUrl = detail?.al?.picUrl
 
             val item = PlayerPlaylistManager.PlaylistItem(
@@ -1300,7 +1307,7 @@ class PlayerViewModel @Inject constructor(
                 playUrl = null,
                 albumArtUrl = albumArtUrl
             )
-            song.id?.let { sid -> _preparedItemCache[sid] = item }
+            _preparedItemCache[song.id] = item
         }
 
         // 严格按 pending 顺序返回（缓存 + 本次新填充）
@@ -1385,7 +1392,7 @@ class PlayerViewModel @Inject constructor(
             null
         }
 
-        val song = detail?.toSong() ?: Song(id = songId)
+        val song = detail ?: placeholderSongDetail(songId)
         val albumArtUrl = detail?.al?.picUrl
 
         val item = PlayerPlaylistManager.PlaylistItem(
@@ -1393,8 +1400,22 @@ class PlayerViewModel @Inject constructor(
             playUrl = null,
             albumArtUrl = albumArtUrl,
         )
-        song.id?.let { sid -> _preparedItemCache[sid] = item }
+        _preparedItemCache[song.id] = item
         return LoadResult.Item(item)
+    }
+
+    private fun placeholderSongDetail(id: Long): SongDetail {
+        return SongDetail(
+            name = null,
+            id = id,
+            ar = null,
+            al = null,
+            alia = emptyList(),
+            dt = null,
+            fee = null,
+            mv = null,
+            tns = emptyList(),
+        )
     }
 
     private suspend fun getOrFetchPlaylistItem(songId: Long): PlayerPlaylistManager.PlaylistItem? {

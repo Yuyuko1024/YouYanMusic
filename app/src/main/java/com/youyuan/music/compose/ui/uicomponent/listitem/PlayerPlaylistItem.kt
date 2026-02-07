@@ -21,13 +21,13 @@ import androidx.compose.ui.unit.dp
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.youyuan.music.compose.R
-import com.youyuan.music.compose.api.model.Song
+import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.ui.theme.Theme
 
 @Composable
 fun PlaylistItem(
     modifier: Modifier = Modifier,
-    song: Song,
+    song: SongDetail,
     currentPlayingIndex: Int,
     itemIndex: Int,
     textColor: Color,
@@ -35,8 +35,8 @@ fun PlaylistItem(
     onRemoveClick: () -> Unit = {}
 ) {
     val title = song.name ?: stringResource(R.string.unknown_song)
-    val artist = song.artists?.joinToString(", ") { it.name ?: "" } ?: stringResource(R.string.unknown_artist)
-    val album = song.album?.name ?: stringResource(R.string.unknown_album)
+    val artist = song.ar?.joinToString(", ") { it.name ?: "" } ?: stringResource(R.string.unknown_artist)
+    val album = song.al?.name ?: stringResource(R.string.unknown_album)
 
     val isCurrentPlaying = currentPlayingIndex == itemIndex
 

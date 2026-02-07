@@ -51,6 +51,7 @@ import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.dialog.YesNoDialog
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.constants.PlayerCoverVerticalPadding
 import com.youyuan.music.compose.constants.PlayerHorizontalPadding
 import com.youyuan.music.compose.ui.uicomponent.listitem.PlaylistItem
@@ -263,7 +264,7 @@ fun PlaylistPager(
 
 @Composable
 private fun PlaylistNowPlayingHeader(
-    song: com.youyuan.music.compose.api.model.Song,
+    song: SongDetail,
     albumArtUrl: String?,
     color: Color,
     onClick: () -> Unit = { }
@@ -306,8 +307,8 @@ private fun PlaylistNowPlayingHeader(
                 color = color
             )
 
-            val artist = song.artists?.joinToString(", ") { it.name ?: "" } ?: ""
-            val album = song.album?.name ?: ""
+            val artist = song.ar?.joinToString(", ") { it.name ?: "" } ?: ""
+            val album = song.al?.name ?: ""
 
             val subTitle = "$artist - $album"
             Text(
