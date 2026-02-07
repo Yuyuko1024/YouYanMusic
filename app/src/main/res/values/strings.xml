@@ -11,6 +11,7 @@
     <string name="title_webview">Web</string>
     <string name="title_playlist">Playlist</string>
     <string name="title_album">Album</string>
+    <string name="title_artist">Artist</string>
 
     <!-- Drawer menu -->
     <string name="drawer_home">Home</string>
@@ -108,8 +109,17 @@
 
     <!-- Song Actions -->
     <string name="song_action_album_name">Album: </string>
+    <string name="song_action_artist_name">Artist: </string>
     <string name="song_action_comments">Comments</string>
     <string name="song_action_add_to_liked">Add to My Liked</string>
     <string name="song_action_remove_from_liked">Remove from My Liked</string>
+
+    <!-- Artist -->
+    <string name="artist_hot_songs">Top Songs</string>
+    <string name="artist_albums">Albums</string>
+    <string name="artist_songs_count">%1$s songs</string>
+    <string name="artist_albums_count">%1$s albums</string>
+    <string name="artist_no_songs">No songs</string>
+    <string name="artist_no_albums">No albums</string>
 
 </resources>

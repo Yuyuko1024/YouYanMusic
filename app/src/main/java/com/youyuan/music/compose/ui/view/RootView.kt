@@ -237,6 +237,7 @@ fun RootView(
             currentRoute?.startsWith("playlist/") == true -> stringResource(R.string.title_playlist)
             currentRoute == ScreenRoute.InAppWebView.route -> stringResource(R.string.title_webview)
             currentRoute?.startsWith("album/") == true -> stringResource(R.string.title_album)
+            currentRoute?.startsWith("artist/") == true -> stringResource(R.string.title_artist)
             else -> stringResource(R.string.app_name)
         }
 

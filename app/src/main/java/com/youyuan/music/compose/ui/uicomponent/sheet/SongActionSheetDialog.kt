@@ -57,6 +57,7 @@ fun SongActionSheetDialog(
     navController: NavController? = null,
 ) {
     var liked by remember(song.songId) { mutableStateOf<Boolean?>(null) }
+    var showArtistsList by remember(song.songId) { mutableStateOf(false) }
 
     LaunchedEffect(song.songId) {
         liked = playerViewModel.checkSongLikedOnce(song.songId)
@@ -66,6 +67,12 @@ fun SongActionSheetDialog(
         modifier = modifier,
         onDismissRequest = onDismissRequest,
     ) { dismiss ->
+        val distinctArtists = song.artists
+            .asSequence()
+            .filter { it.artistId > 0L }
+            .distinctBy { it.artistId }
+            .toList()
+
         RoundedColumn {
             SongActionHeader(song = song)
         }
@@ -80,6 +87,29 @@ fun SongActionSheetDialog(
                 },
                 text = "${stringResource(R.string.song_action_album_name)}${song.album}",
                 iconPainter = painterResource(R.drawable.ic_album_24px),
+                iconColor = SaltTheme.colors.highlight,
+            )
+
+            val artistDisplay = (song.artist?.trim()).takeUnless { it.isNullOrBlank() }
+                ?: distinctArtists.joinToString(", ") { it.name.orEmpty() }.ifBlank { null }
+                ?: stringResource(R.string.unknown_artist)
+
+            Item(
+                onClick = {
+                    when (distinctArtists.size) {
+                        1 -> {
+                            val id = distinctArtists.first().artistId
+                            navController?.navigate(ScreenRoute.ArtistDetail.createRoute(id))
+                            dismiss()
+                        }
+
+                        else -> {
+                            if (distinctArtists.isNotEmpty()) showArtistsList = true
+                        }
+                    }
+                },
+                text = "${stringResource(R.string.song_action_artist_name)}$artistDisplay",
+                iconPainter = painterResource(R.drawable.ic_artist_24px),
                 iconColor = SaltTheme.colors.highlight,
             )
 
@@ -117,6 +147,18 @@ fun SongActionSheetDialog(
                     if (isLiked) R.drawable.ic_favorite else R.drawable.ic_favorite_border
                 ),
                 iconColor = SaltTheme.colors.highlight,
+            )
+        }
+
+        if (showArtistsList) {
+            ArtistsListSheetDialog(
+                artists = distinctArtists,
+                onDismissRequest = { showArtistsList = false },
+                onArtistClick = { artist ->
+                    navController?.navigate(ScreenRoute.ArtistDetail.createRoute(artist.artistId))
+                    showArtistsList = false
+                    dismiss()
+                }
             )
         }
     }
@@ -161,7 +203,9 @@ private fun SongActionHeader(
             )
 
             val sub = buildString {
-                val artist = song.artist ?: stringResource(R.string.unknown_artist)
+                val artist = (song.artist?.trim()).takeUnless { it.isNullOrBlank() }
+                    ?: song.artists.joinToString(", ") { it.name.orEmpty() }.ifBlank { null }
+                    ?: stringResource(R.string.unknown_artist)
                 val album = song.album ?: stringResource(R.string.unknown_album)
                 append(artist)
                 append(" - ")
@@ -185,4 +229,10 @@ data class SongActionInfo(
     val artist: String?,
     val album: String?,
     val artworkUrl: String?,
+    val artists: List<SongActionArtist> = emptyList(),
+)
+
+data class SongActionArtist(
+    val artistId: Long,
+    val name: String?,
 )

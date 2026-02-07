@@ -66,6 +66,7 @@ import com.youyuan.music.compose.ui.uicomponent.sheet.AudioQualitySheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.MusicFXSheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
+import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.utils.PlayerForegroundColorLight
 import com.youyuan.music.compose.ui.utils.getPlayerUIColor
@@ -201,6 +202,7 @@ fun BottomSheetPlayer(
                     artist = artistName,
                     album = currentSong.al?.name,
                     artworkUrl = currentArtworkUrl,
+                    artists = currentSong.ar.orEmpty().map { SongActionArtist(artistId = it.id, name = it.name) },
                 ),
                 navController = navController,
                 onDismissRequest = { showSongActionDialog = false },
