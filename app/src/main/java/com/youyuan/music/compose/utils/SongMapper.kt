@@ -1,58 +1,48 @@
 package com.youyuan.music.compose.utils
 
-import com.youyuan.music.compose.api.model.Album
-import com.youyuan.music.compose.api.model.Artist
 import com.youyuan.music.compose.api.model.Song
 import com.youyuan.music.compose.api.model.SongDetail
+import com.youyuan.music.compose.api.model.ArtistDetail
+import com.youyuan.music.compose.api.model.SongDetailAlbumData
 
 /**
- * 将 SongDetail 转换为 Song
+ * 将搜索结果 Song 转换为 SongDetail（用于播放器播放列表统一域模型）。
+ * 说明：SongDetail 的字段更精简，部分信息在搜索模型里不存在时会置空。
  */
-fun SongDetail.toSong(): Song {
-    return Song(
-        id = this.id,
+fun Song.toSongDetail(): SongDetail {
+    fun List<String?>?.toNonBlankDistinctNullable(): List<String?>? {
+        val out = this
+            .orEmpty()
+            .asSequence()
+            .mapNotNull { it?.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .toList()
+        return out.takeIf { it.isNotEmpty() }
+    }
+
+    return SongDetail(
         name = this.name,
-        artists = this.ar?.map { artistDetail ->
-            Artist(
-                id = artistDetail.id,
-                name = artistDetail.name,
+        id = this.id ?: 0L,
+        ar = this.artists
+            ?.mapNotNull { a ->
+                ArtistDetail(
+                    id = a.id ?: 0L,
+                    name = a.name,
+                )
+            }
+            ?.takeIf { it.isNotEmpty() },
+        al = this.album?.let { album ->
+            SongDetailAlbumData(
+                id = album.id ?: 0L,
+                name = album.name,
                 picUrl = null,
-                alias = null,
-                albumSize = null,
-                musicSize = null,
-                picId = null,
-                fansGroup = null,
-                recommendText = null,
-                appendRecText = null,
-                fansSize = null,
-                img1v1Url = null,
-                img1v1 = null,
-                trans = null
             )
         },
-        album = this.al?.let { albumDetail ->
-            Album(
-                id = albumDetail.id,
-                name = albumDetail.name,
-                artist = null,
-                publishTime = null,
-                size = null,
-                copyrightId = null,
-                status = null,
-                picId = null,
-                mark = null
-            )
-        },
-        duration = this.dt,
-        copyrightId = null,
-        status = null,
-        alias = null,
-        rtype = null,
-        ftype = null,
-        transNames = null,
-        mvid = this.mv,
-        fee = this.fee?.toLong(),
-        rUrl = null,
-        mark = null
+        alia = this.alias?.map { it as String? }.toNonBlankDistinctNullable() ?: emptyList(),
+        dt = this.duration,
+        fee = this.fee?.toInt(),
+        mv = this.mvid,
+        tns = this.transNames?.map { it as String? }.toNonBlankDistinctNullable() ?: emptyList(),
     )
 }

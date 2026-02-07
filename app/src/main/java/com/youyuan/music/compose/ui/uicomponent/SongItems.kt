@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -84,13 +86,52 @@ fun SongItem(
                     .padding(end = 8.dp)
                     .align(Alignment.CenterVertically)
             ) {
-                Text(
-                    text = song.name ?: stringResource(R.string.unknown_song),
-                    style = SaltTheme.textStyles.main,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = SaltTheme.colors.text
-                )
+                fun List<String?>?.toDisplayText(): String? =
+                    this
+                        .orEmpty()
+                        .asSequence()
+                        .mapNotNull { it?.trim() }
+                        .filter { it.isNotEmpty() }
+                        .distinct()
+                        .joinToString(" / ")
+                        .takeIf { it.isNotBlank() }
+
+                val aliasText = song.alia.toDisplayText()
+                    ?: song.tns.toDisplayText()
+
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val containerMaxWidth = maxWidth
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val titleModifier = if (aliasText != null) {
+                            Modifier.widthIn(max = containerMaxWidth * 0.7f)
+                        } else {
+                            Modifier.weight(1f)
+                        }
+
+                        Text(
+                            text = song.name ?: stringResource(R.string.unknown_song),
+                            style = SaltTheme.textStyles.main,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = SaltTheme.colors.text,
+                            modifier = titleModifier
+                        )
+                        if (aliasText != null) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "（$aliasText）",
+                                style = SaltTheme.textStyles.sub,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = SaltTheme.colors.subText,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
 
                 val artist = song.ar?.joinToString(", ") { it.name ?: "" }
                     ?: stringResource(R.string.unknown_artist)

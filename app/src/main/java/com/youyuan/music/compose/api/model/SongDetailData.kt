@@ -20,12 +20,16 @@ data class SongDetail(
     val ar: List<ArtistDetail>?,
     @SerializedName("al")
     val al: SongDetailAlbumData?,
+    @SerializedName("alia")
+    val alia: List<String?>? = emptyList(), // 别名
     @SerializedName("dt")
     val dt: Long?, // 歌曲时长
     @SerializedName("fee")
     val fee: Int?,
     @SerializedName("mv")
-    val mv: Long?
+    val mv: Long?,
+    @SerializedName("tns")
+    val tns: List<String?>? = emptyList(),
 )
 
 data class ArtistDetail(

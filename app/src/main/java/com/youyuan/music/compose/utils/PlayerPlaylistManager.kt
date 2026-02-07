@@ -3,7 +3,7 @@ package com.youyuan.music.compose.utils
 import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
-import com.youyuan.music.compose.api.model.Song
+import com.youyuan.music.compose.api.model.SongDetail
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 object PlayerPlaylistManager {
     
     data class PlaylistItem(
-        val song: Song,
+        val song: SongDetail,
         val playUrl: String?,
         val albumArtUrl: String?
     )
@@ -37,7 +37,7 @@ object PlayerPlaylistManager {
         return _playlist.value.indexOfFirst { it.song.id == songId }
     }
     
-    fun addItem(song: Song, playUrl: String?, albumArtUrl: String?) {
+    fun addItem(song: SongDetail, playUrl: String?, albumArtUrl: String?) {
         if (containsSong(song.id)) return
         val newItem = PlaylistItem(song, playUrl, albumArtUrl)
         _playlist.value += newItem
@@ -119,15 +119,15 @@ object PlayerPlaylistManager {
             Uri.parse(playUrl)
         } else {
             // 懒加载占位：由 Service 侧 DataSource 解析 songId -> 实际播放 URL
-            song.id?.let { Uri.parse("yym://song/$it") }
+            Uri.parse("yym://song/${song.id}")
         }
         resolvedUri?.let { builder.setUri(it) }
         return builder
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(song.name ?: "Unknown")
-                    .setArtist(song.artists?.joinToString(", ") { it.name ?: "Unknown" } ?: "Unknown")
-                    .setAlbumTitle(song.album?.name)
+                    .setArtist(song.ar?.joinToString(", ") { it.name ?: "Unknown" } ?: "Unknown")
+                    .setAlbumTitle(song.al?.name)
                     .setArtworkUri(albumArtUrl?.let { Uri.parse(it) })
                     .build()
             )
@@ -138,22 +138,22 @@ object PlayerPlaylistManager {
         return _playlist.value.map { it.toMediaItem() }
     }
     
-    fun buildMediaItem(song: Song, playUrl: String?, albumArtUrl: String?): MediaItem {
+    fun buildMediaItem(song: SongDetail, playUrl: String?, albumArtUrl: String?): MediaItem {
         val builder = MediaItem.Builder()
             .setMediaId(song.id.toString())
         val resolvedUri = if (!playUrl.isNullOrBlank()) {
             Uri.parse(playUrl)
         } else {
             // 懒加载占位：由 Service 侧 DataSource 解析 songId -> 实际播放 URL
-            song.id?.let { Uri.parse("yym://song/$it") }
+            Uri.parse("yym://song/${song.id}")
         }
         resolvedUri?.let { builder.setUri(it) }
         return builder
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(song.name ?: "Unknown")
-                    .setArtist(song.artists?.joinToString(", ") { it.name ?: "Unknown" } ?: "Unknown")
-                    .setAlbumTitle(song.album?.name)
+                    .setArtist(song.ar?.joinToString(", ") { it.name ?: "Unknown" } ?: "Unknown")
+                    .setAlbumTitle(song.al?.name)
                     .setArtworkUri(albumArtUrl?.let { Uri.parse(it) })
                     .build()
             )
