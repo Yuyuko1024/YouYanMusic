@@ -8,11 +8,14 @@ import com.youyuan.music.compose.api.model.AlbumDetail
 import com.youyuan.music.compose.api.model.ArtistProfile
 import com.youyuan.music.compose.api.model.SongDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import retrofit2.HttpException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -37,6 +40,10 @@ class ArtistViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    fun consumeError() {
+        _error.value = null
+    }
+
     fun loadArtist(artistId: Long) {
         if (artistId <= 0L) {
             _error.value = "artistId 无效"
@@ -48,30 +55,32 @@ class ArtistViewModel @Inject constructor(
             _error.value = null
 
             try {
-                val detailDeferred = async {
+                val detailResp = withContext(Dispatchers.IO) {
                     artistApi.getArtistDetail(id = artistId)
                 }
-                val topSongDeferred = async {
-                    artistApi.getArtistTopSongs(id = artistId)
-                }
-
-                val detailResp = detailDeferred.await()
                 if (detailResp.code != 200) {
-                    throw IllegalStateException("artist/detail 接口返回异常 code=${detailResp.code}")
+                    throw IllegalStateException(
+                        detailResp.message
+                            ?: "artist/detail 接口返回异常 code=${detailResp.code}"
+                    )
                 }
 
                 val profile = detailResp.data?.artist
                 _artist.value = profile
 
-                val topSongResp = topSongDeferred.await()
+                val topSongResp = withContext(Dispatchers.IO) {
+                    artistApi.getArtistTopSongs(id = artistId)
+                }
                 if (topSongResp.code != 200) {
-                    throw IllegalStateException("artist/top/song 接口返回异常 code=${topSongResp.code}")
+                    throw IllegalStateException(
+                        "artist/top/song 接口返回异常 code=${topSongResp.code}"
+                    )
                 }
                 _topSongs.value = topSongResp.songs.orEmpty().take(50)
 
                 _albums.value = fetchAllAlbums(artistId)
             } catch (t: Throwable) {
-                _error.value = t.message ?: "加载失败"
+                _error.value = t.toUserMessage()
             } finally {
                 _loading.value = false
             }
@@ -87,9 +96,13 @@ class ArtistViewModel @Inject constructor(
 
         while (more && guard < 40) {
             guard++
-            val resp = artistApi.getArtistAlbums(id = artistId, limit = limit, offset = offset)
+            val resp = withContext(Dispatchers.IO) {
+                artistApi.getArtistAlbums(id = artistId, limit = limit, offset = offset)
+            }
             if (resp.code != 200) {
-                throw IllegalStateException("artist/album 接口返回异常 code=${resp.code}")
+                throw IllegalStateException(
+                    "artist/album 接口返回异常 code=${resp.code}"
+                )
             }
 
             val batch = resp.hotAlbums.orEmpty()
@@ -101,5 +114,39 @@ class ArtistViewModel @Inject constructor(
         }
 
         return results
+    }
+
+    private fun Throwable.toUserMessage(): String {
+        val rawMessage = message.orEmpty()
+        if (rawMessage.contains("RISK_CONTROL_-462")) {
+            return "检测到您的网络环境存在风险，请稍后再试"
+        }
+
+        if (this is HttpException) {
+            val code = code()
+            val errorBody = try {
+                response()?.errorBody()?.string()
+            } catch (_: Throwable) {
+                null
+            }
+
+            val serverMessage = errorBody
+                ?.let {
+                    try {
+                        JSONObject(it).optString("message")
+                    } catch (_: Throwable) {
+                        null
+                    }
+                }
+                ?.takeIf { it.isNotBlank() }
+
+            return serverMessage
+                ?: when (code) {
+                    404 -> "无相关艺人"
+                    else -> "HTTP $code ${rawMessage.ifBlank { message() }}"
+                }
+        }
+
+        return message ?: "加载失败"
     }
 }

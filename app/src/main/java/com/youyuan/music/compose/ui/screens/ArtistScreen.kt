@@ -1,5 +1,6 @@
 package com.youyuan.music.compose.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -91,6 +92,17 @@ fun ArtistScreen(
     val albums by viewModel.albums.collectAsState()
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
+
+    val context = LocalContext.current
+
+    LaunchedEffect(error) {
+        val message = error ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeError()
+        if (artist == null) {
+            navController.popBackStack()
+        }
+    }
 
     LaunchedEffect(artistId) {
         viewModel.loadArtist(artistId)
