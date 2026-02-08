@@ -1,0 +1,95 @@
+name: Build APK and Pre-release
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK
+        shell: bash
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease
+
+      - name: Collect APK into dist/
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [[ ! -f "$APK_PATH" ]]; then
+            echo "APK not found at $APK_PATH"
+            find app/build/outputs -maxdepth 5 -type f -name "*.apk" -print
+            exit 1
+          fi
+
+          mkdir -p dist
+          SHORT_SHA="${GITHUB_SHA::7}"
+          OUT_NAME="YouYanMusic-${GITHUB_REF_NAME}-${GITHUB_RUN_NUMBER}-${SHORT_SHA}.apk"
+          cp "$APK_PATH" "dist/$OUT_NAME"
+          echo "APK_FILE=dist/$OUT_NAME" >> "$GITHUB_ENV"
+
+      - name: Generate release notes from push commits
+        shell: bash
+        run: |
+          set -euo pipefail
+          BEFORE="${{ github.event.before }}"
+          AFTER="${GITHUB_SHA}"
+
+          if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+            COMMITS=$(git log -20 --pretty=format:'- %s (%h)')
+          else
+            COMMITS=$(git log "$BEFORE..$AFTER" --pretty=format:'- %s (%h)')
+          fi
+
+          BUILD_TIME=$(date -u +"%Y-%m-%d %H:%M:%SZ")
+
+          {
+            echo "# 预发布构建"
+            echo
+            echo "- 分支：${GITHUB_REF_NAME}"
+            echo "- 提交：${GITHUB_SHA}"
+            echo "- 构建时间(UTC)：${BUILD_TIME}"
+            echo
+            echo "## 更新日志"
+            echo
+            if [[ -n "${COMMITS// /}" ]]; then
+              echo "$COMMITS"
+            else
+              echo "- （无）"
+            fi
+          } > RELEASE_NOTES.md
+
+      - name: Create GitHub pre-release and upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pre-${{ github.ref_name }}-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: Pre-release ${{ github.ref_name }} #${{ github.run_number }}
+          prerelease: true
+          body_path: RELEASE_NOTES.md
+          files: |
+            ${{ env.APK_FILE }}
