@@ -8,6 +8,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.AlbumApi
@@ -76,19 +78,17 @@ class PlayerViewModel @Inject constructor(
         const val TAG = "PlayerViewModel"
         private const val MAX_PERSISTED_PLAYLIST_SIZE = 500
         private const val PLAYBACK_SESSION_SAVE_INTERVAL_MS = 5_000L
+
+        private const val SESSION_KEY_VERSION = "version"
+        private const val SESSION_KEY_SONG_IDS = "songIds"
+        private const val SESSION_KEY_CURRENT_INDEX = "currentIndex"
+        private const val SESSION_KEY_CURRENT_SONG_ID = "currentSongId"
+        private const val SESSION_KEY_POSITION_MS = "positionMs"
+        private const val SESSION_KEY_WAS_PLAYING = "wasPlaying"
+        private const val SESSION_KEY_UPDATED_AT_MS = "updatedAtMs"
     }
 
     private val gson = Gson()
-
-    private data class PersistedPlaybackSession(
-        val version: Int = 1,
-        val songIds: List<Long>,
-        val currentIndex: Int,
-        val currentSongId: Long?,
-        val positionMs: Long,
-        val wasPlaying: Boolean,
-        val updatedAtMs: Long,
-    )
 
     private val songUrlApi: SongUrlApi = apiClient.createService(SongUrlApi::class.java)
     private val albumApi: AlbumApi = apiClient.createService(AlbumApi::class.java)
@@ -550,18 +550,23 @@ class PlayerViewModel @Inject constructor(
             maxSize = MAX_PERSISTED_PLAYLIST_SIZE,
         )
 
-        val session = PersistedPlaybackSession(
-            songIds = persistedIds,
-            currentIndex = adjustedIndex,
-            currentSongId = persistedIds.getOrNull(adjustedIndex),
-            positionMs = rawPositionMs.coerceAtLeast(0L),
-            wasPlaying = isPlaying.value,
-            updatedAtMs = System.currentTimeMillis(),
-        )
+        val sessionJsonObject = JsonObject().apply {
+            addProperty(SESSION_KEY_VERSION, 1)
+
+            val idArray = JsonArray()
+            persistedIds.forEach { idArray.add(it) }
+            add(SESSION_KEY_SONG_IDS, idArray)
+
+            addProperty(SESSION_KEY_CURRENT_INDEX, adjustedIndex)
+            addProperty(SESSION_KEY_CURRENT_SONG_ID, persistedIds.getOrNull(adjustedIndex))
+            addProperty(SESSION_KEY_POSITION_MS, rawPositionMs.coerceAtLeast(0L))
+            addProperty(SESSION_KEY_WAS_PLAYING, isPlaying.value)
+            addProperty(SESSION_KEY_UPDATED_AT_MS, System.currentTimeMillis())
+        }
         if (resetBeforeWrite) {
             settingsDataStore.clearPlayerSession()
         }
-        settingsDataStore.setPlayerSessionJson(gson.toJson(session))
+        settingsDataStore.setPlayerSessionJson(gson.toJson(sessionJsonObject))
     }
 
     private fun cropPersistedWindow(
@@ -594,25 +599,44 @@ class PlayerViewModel @Inject constructor(
         val raw = settingsDataStore.playerSessionJson.first().trim()
         if (raw.isBlank()) return
 
-        val session = runCatching {
-            gson.fromJson(raw, PersistedPlaybackSession::class.java)
+        val sessionJsonObject = runCatching {
+            gson.fromJson(raw, JsonObject::class.java)
         }.getOrNull() ?: return
 
-        if (session.songIds.isEmpty()) return
+        val parsedSongIds = sessionJsonObject.getAsJsonArray(SESSION_KEY_SONG_IDS)
+            ?.mapNotNull { element ->
+                runCatching { element.asLong }.getOrNull()
+            }
+            ?.filter { it > 0L }
+            .orEmpty()
+
+        if (parsedSongIds.isEmpty()) {
+            settingsDataStore.clearPlayerSession()
+            return
+        }
 
         val sessionId = newBuildSessionId()
         buildLikedPlaylistJob?.cancel()
 
-        val cappedIds = session.songIds.take(MAX_PERSISTED_PLAYLIST_SIZE)
+        val cappedIds = parsedSongIds.take(MAX_PERSISTED_PLAYLIST_SIZE)
         setFullPlaylistIds(cappedIds)
 
         val items = buildPlaylistItemsByIds(cappedIds)
         if (items.isEmpty()) return
 
-        val indexBySongId = session.currentSongId?.let { songId ->
+        val savedCurrentSongId = sessionJsonObject.get(SESSION_KEY_CURRENT_SONG_ID)
+            ?.takeIf { !it.isJsonNull }
+            ?.let { runCatching { it.asLong }.getOrNull() }
+
+        val savedCurrentIndex = sessionJsonObject.get(SESSION_KEY_CURRENT_INDEX)
+            ?.takeIf { !it.isJsonNull }
+            ?.let { runCatching { it.asInt }.getOrNull() }
+            ?: 0
+
+        val indexBySongId = savedCurrentSongId?.let { songId ->
             cappedIds.indexOf(songId).takeIf { it >= 0 }
         }
-        val restoreIndex = (indexBySongId ?: session.currentIndex)
+        val restoreIndex = (indexBySongId ?: savedCurrentIndex)
             .coerceIn(0, (items.size - 1).coerceAtLeast(0))
 
         commitSetPlaylist(
@@ -622,7 +646,11 @@ class PlayerViewModel @Inject constructor(
             startPlay = false,
         )
 
-        val seekPos = session.positionMs.coerceAtLeast(0L)
+        val seekPos = sessionJsonObject.get(SESSION_KEY_POSITION_MS)
+            ?.takeIf { !it.isJsonNull }
+            ?.let { runCatching { it.asLong }.getOrNull() }
+            ?.coerceAtLeast(0L)
+            ?: 0L
         onPlayerThread {
             playerController.getPlayer()?.seekTo(restoreIndex, seekPos)
         }
