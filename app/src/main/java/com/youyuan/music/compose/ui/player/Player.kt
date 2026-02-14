@@ -61,7 +61,7 @@ import com.youyuan.music.compose.pref.AudioQualityLevel
 import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.SettingsDataStore
 import com.youyuan.music.compose.ui.uicomponent.ResizableIconButton
-import com.youyuan.music.compose.ui.uicomponent.flowing.FlowingLightBackground
+import com.youyuan.music.compose.ui.uicomponent.flowing.FlowingLightCanvasBackground
 import com.youyuan.music.compose.ui.uicomponent.sheet.AudioQualitySheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.MusicFXSheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
@@ -314,7 +314,7 @@ fun BottomSheetPlayer(
         },
         backgroundContent = {
             // 流光溢彩背景
-            FlowingLightBackground(
+            FlowingLightCanvasBackground(
                 isPlaying = isPlaying,
                 imageUrl = currentArtworkUrl,
                 modifier = Modifier.fillMaxSize(),
