@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +47,8 @@ import com.moriafly.salt.ui.dialog.DialogTitle
 import com.moriafly.salt.ui.innerPadding
 import com.moriafly.salt.ui.outerPadding
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
+import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 
 @UnstableSaltUiApi
@@ -92,76 +95,91 @@ fun LoginScreen(
         }
     }
 
-    Column(modifier.fillMaxSize()) {
-        RoundedColumn(
-            modifier = Modifier.fillMaxWidth()
+    ScreenScaffold(
+        modifier = modifier,
+        useContentPadding = true,
+        topBar = {
+            YouYanTitleBar(
+                onBack = { navController.popBackStack() },
+                text = stringResource(R.string.title_login),
+            )
+        },
+    ) { padding: PaddingValues ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
         ) {
-            ItemEdit(
-                text = phoneNumber,
-                onChange = { number ->
-                    phoneNumber = number
-                },
-                hint = "请输入+86手机号",
+            RoundedColumn(
                 modifier = Modifier.fillMaxWidth()
-            )
-            Row(Modifier.fillMaxWidth()) {
+            ) {
                 ItemEdit(
-                    text = code,
-                    onChange = {
-                        code = it
+                    text = phoneNumber,
+                    onChange = { number ->
+                        phoneNumber = number
                     },
-                    hint = "验证码",
+                    hint = "请输入+86手机号",
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(Modifier.fillMaxWidth()) {
+                    ItemEdit(
+                        text = code,
+                        onChange = {
+                            code = it
+                        },
+                        hint = "验证码",
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    )
+                    TextButton(
+                        text = "发送验证码",
+                        onClick = {
+                            profileViewModel.sendCaptcha(phone = phoneNumber)
+                        }
+                    )
+                }
+            }
+            ItemOuterTextButton(
+                text = "登录",
+                onClick = {
+                    profileViewModel.loginWithCaptcha(
+                        phone = phoneNumber,
+                        captcha = code
+                    )
+                }
+            )
+            ItemOuterTextButton(
+                text = "扫码登录",
+                onClick = {
+                    showQrCodeDialog = true
+                    profileViewModel.generateQrCode()
+                }
+            )
+
+            // 显示提示信息
+            notice?.let { msg ->
+                Text(
+                    text = msg,
                     modifier = Modifier
-                        .weight(1f)
                         .fillMaxWidth()
-                )
-                TextButton(
-                    text = "发送验证码",
-                    onClick = {
-                        profileViewModel.sendCaptcha(phone = phoneNumber)
-                    }
+                        .padding(16.dp),
+                    textAlign = TextAlign.Center,
+                    style = SaltTheme.textStyles.sub
                 )
             }
-        }
-        ItemOuterTextButton(
-            text = "登录",
-            onClick = {
-                profileViewModel.loginWithCaptcha(
-                    phone = phoneNumber,
-                    captcha = code
-                )
-            }
-        )
-        ItemOuterTextButton(
-            text = "扫码登录",
-            onClick = {
-                showQrCodeDialog = true
-                profileViewModel.generateQrCode()
-            }
-        )
 
-        // 显示提示信息
-        notice?.let { msg ->
-            Text(
-                text = msg,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                textAlign = TextAlign.Center,
-                style = SaltTheme.textStyles.sub
-            )
-        }
-
-        // 显示错误信息
-        error?.let { errorMessage ->
-            Text(
-                text = errorMessage,
-                color = SaltTheme.colors.highlight,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                textAlign = TextAlign.Center
-            )
+            // 显示错误信息
+            error?.let { errorMessage ->
+                Text(
+                    text = errorMessage,
+                    color = SaltTheme.colors.highlight,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 

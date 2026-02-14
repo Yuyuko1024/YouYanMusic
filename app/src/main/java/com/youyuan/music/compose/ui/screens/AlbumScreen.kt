@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +31,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
@@ -43,11 +45,13 @@ import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.AlbumDetail
 import com.youyuan.music.compose.api.model.SongDetail
+import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
 import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
+import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.AlbumDetailViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import java.text.SimpleDateFormat
@@ -103,107 +107,125 @@ fun AlbumScreen(
         viewModel.loadAlbumDetail(albumId)
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        when {
-            loading && album == null -> {
-                Text(
-                    text = "加载中...",
-                    style = SaltTheme.textStyles.sub,
-                    color = SaltTheme.colors.subText,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-
-            !error.isNullOrBlank() && album == null -> {
-                Text(
-                    text = error ?: "加载失败",
-                    style = SaltTheme.textStyles.sub,
-                    color = SaltTheme.colors.subText,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-
-            else -> {
-                val data = album
-                if (data == null) {
+    ScreenScaffold(
+        modifier = modifier,
+        useContentPadding = true,
+        topBar = {
+            YouYanTitleBar(
+                onBack = { navController.popBackStack() },
+                text = album?.name ?: stringResource(R.string.title_album),
+            )
+        },
+    ) { padding: PaddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            when {
+                loading && album == null -> {
                     Text(
-                        text = "暂无数据",
+                        text = "加载中...",
                         style = SaltTheme.textStyles.sub,
                         color = SaltTheme.colors.subText,
                         modifier = Modifier.align(Alignment.Center)
                     )
-                    return@Box
                 }
 
-                // 背景艺术图高斯模糊
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(data.picUrl)
-                        .crossfade(true)
-                        .placeholder(R.drawable.ic_album_24px)
-                        .build(),
-                    contentDescription = data.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().blur(15.dp),
-                    alpha = 0.3f
-                )
+                !error.isNullOrBlank() && album == null -> {
+                    Text(
+                        text = error ?: "加载失败",
+                        style = SaltTheme.textStyles.sub,
+                        color = SaltTheme.colors.subText,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    item {
-                        AlbumHeader(
-                            album = data,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
-                        )
-                    }
-
-                    item {
+                else -> {
+                    val data = album
+                    if (data == null) {
                         Text(
-                            text = "歌曲列表",
-                            style = SaltTheme.textStyles.main,
-                            color = SaltTheme.colors.text,
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
+                            text = "暂无数据",
+                            style = SaltTheme.textStyles.sub,
+                            color = SaltTheme.colors.subText,
+                            modifier = Modifier.align(Alignment.Center)
                         )
+                        return@Box
                     }
 
-                    if (songs.isEmpty()) {
+                    // 背景艺术图高斯模糊
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(data.picUrl)
+                            .crossfade(true)
+                            .placeholder(R.drawable.ic_album_24px)
+                            .build(),
+                        contentDescription = data.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().blur(15.dp),
+                        alpha = 0.3f
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         item {
-                            Text(
-                                text = "暂无歌曲",
-                                style = SaltTheme.textStyles.sub,
-                                color = SaltTheme.colors.subText,
-                                modifier = Modifier.padding(vertical = 16.dp, horizontal = 12.dp)
+                            AlbumHeader(
+                                album = data,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
                             )
                         }
-                    } else {
-                        items(
-                            count = songs.size,
-                            key = { index -> songs[index].id }
-                        ) { index ->
-                            val song = songs.getOrNull(index)
-                            if (song != null) {
-                                SongItem(
-                                    song = song,
-                                    onMoreClick = {
-                                        selectedSongForAction = it
-                                        showSongActionDialog = true
-                                    },
-                                    onClick = { songId ->
-                                        playerViewModel.playTargetSongWithPlaylistSmart(
-                                            targetSongId = songId,
-                                            allSongIds = songs.map { it.id },
-                                        )
-                                    }
+
+                        item {
+                            Text(
+                                text = "歌曲列表",
+                                style = SaltTheme.textStyles.main,
+                                color = SaltTheme.colors.text,
+                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
+                            )
+                        }
+
+                        if (songs.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "暂无歌曲",
+                                    style = SaltTheme.textStyles.sub,
+                                    color = SaltTheme.colors.subText,
+                                    modifier = Modifier.padding(
+                                        vertical = 16.dp,
+                                        horizontal = 12.dp
+                                    )
                                 )
-                            } else {
-                                SongItemPlaceholder()
+                            }
+                        } else {
+                            items(
+                                count = songs.size,
+                                key = { index -> songs[index].id }
+                            ) { index ->
+                                val song = songs.getOrNull(index)
+                                if (song != null) {
+                                    SongItem(
+                                        song = song,
+                                        onMoreClick = {
+                                            selectedSongForAction = it
+                                            showSongActionDialog = true
+                                        },
+                                        onClick = { songId ->
+                                            playerViewModel.playTargetSongWithPlaylistSmart(
+                                                targetSongId = songId,
+                                                allSongIds = songs.map { it.id },
+                                            )
+                                        }
+                                    )
+                                } else {
+                                    SongItemPlaceholder()
+                                }
                             }
                         }
-                    }
 
-                    item { Spacer(modifier = Modifier.height(12.dp)) }
+                        item { Spacer(modifier = Modifier.height(12.dp)) }
+                    }
                 }
             }
         }

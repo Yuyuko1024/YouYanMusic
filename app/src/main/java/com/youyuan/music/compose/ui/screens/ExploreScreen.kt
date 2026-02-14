@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -47,6 +48,7 @@ import coil3.compose.AsyncImage
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
+import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.BannerItem
 import com.youyuan.music.compose.api.model.PersonalFmSong
 import com.youyuan.music.compose.api.model.PersonalizedNewSongItem
@@ -54,6 +56,7 @@ import com.youyuan.music.compose.api.model.PersonalizedPlaylistItem
 import com.youyuan.music.compose.api.model.RecommendResourceItem
 import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.api.model.ToplistItem
+import com.youyuan.music.compose.ui.view.MainTabScaffold
 import com.youyuan.music.compose.ui.viewmodel.ExploreViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
@@ -71,6 +74,8 @@ fun ExploreScreen(
     modifier: Modifier = Modifier,
     context: Context,
     navController: NavHostController,
+    openDrawer: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
     playerViewModel: PlayerViewModel = hiltViewModel(),
     exploreViewModel: ExploreViewModel = hiltViewModel(),
     profileViewModel: ProfileViewModel = hiltViewModel(),
@@ -126,17 +131,24 @@ fun ExploreScreen(
         onRefresh = { exploreViewModel.refreshAll(isLoggedIn = isLoggedIn) },
     )
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .pullRefresh(pullRefreshState)
-    ) {
-        LazyColumn(
+    MainTabScaffold(
+        title = stringResource(R.string.title_explore),
+        onDrawerClick = openDrawer,
+        onSearchClick = onSearchClick,
+        modifier = modifier,
+    ) { padding ->
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(padding)
+                .pullRefresh(pullRefreshState)
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
             item {
                 BannerSection(
                     banners = banners,
@@ -281,6 +293,8 @@ fun ExploreScreen(
             modifier = Modifier.align(Alignment.TopCenter)
         )
     }
+
+}
 
 }
 

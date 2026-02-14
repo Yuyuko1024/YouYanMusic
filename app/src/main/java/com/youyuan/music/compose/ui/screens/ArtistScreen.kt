@@ -65,9 +65,11 @@ import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.ui.uicomponent.AlbumItem
 import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
+import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
+import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.ArtistViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import kotlinx.coroutines.launch
@@ -133,7 +135,21 @@ fun ArtistScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    ScreenScaffold(
+        modifier = modifier,
+        useContentPadding = true,
+        topBar = {
+            YouYanTitleBar(
+                onBack = { navController.popBackStack() },
+                text = artist?.name ?: stringResource(R.string.title_artist),
+            )
+        },
+    ) { padding ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+    ) {
         val coverUrl = artist?.cover ?: artist?.avatar
         if (!coverUrl.isNullOrBlank()) {
             AsyncImage(
@@ -366,6 +382,7 @@ fun ArtistScreen(
                 }
             }
         }
+    }
     }
 }
 

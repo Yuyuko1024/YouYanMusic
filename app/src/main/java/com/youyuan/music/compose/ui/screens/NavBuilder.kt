@@ -5,7 +5,8 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -25,40 +26,52 @@ import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
 fun NavGraphBuilder.navigationBuilder(
     context: Context,
     navController: NavHostController,
-    scrollBehavior: TopAppBarScrollBehavior,
     searchViewModel: SearchViewModel,
     playerViewModel: PlayerViewModel,
     profileViewModel: ProfileViewModel,
+    openDrawer: () -> Unit,
 ) {
     composable(ScreenRoute.Explore.route) {
         ExploreScreen(
+            modifier = Modifier,
             context = context,
             navController = navController,
             playerViewModel = playerViewModel,
+            openDrawer = openDrawer,
+            onSearchClick = { navController.navigate(ScreenRoute.Search.route) },
         )
     }
     composable(ScreenRoute.Profile.route) {
         ProfileScreen(
+            modifier = Modifier,
             context = context,
             navController = navController,
             profileViewModel = profileViewModel,
+            openDrawer = openDrawer,
+            onSearchClick = { navController.navigate(ScreenRoute.Search.route) },
         )
     }
     composable(ScreenRoute.Search.route) {
         SearchScreen(
+            modifier = Modifier,
             searchViewModel = searchViewModel,
             playerViewModel = playerViewModel,
+            onBackClick = { navController.popBackStack() },
         )
     }
     // 设置页面
     composable(ScreenRoute.Settings.route) {
-        SettingsScreen()
+        SettingsScreen(
+            modifier = Modifier,
+            onBack = { navController.popBackStack() },
+        )
     }
     // 登录页面
     composable(ScreenRoute.LoginPage.route) {
         LoginScreen(
+            modifier = Modifier,
             profileViewModel = profileViewModel,
-            navController = navController
+            navController = navController,
         )
     }
     // 歌曲评论
@@ -70,6 +83,7 @@ fun NavGraphBuilder.navigationBuilder(
     ) { backStackEntry ->
         val songId = backStackEntry.arguments?.getLong("songId") ?: 0L
         SongCommentScreen(
+            modifier = Modifier,
             navController = navController,
             songId = songId,
         )
@@ -83,7 +97,11 @@ fun NavGraphBuilder.navigationBuilder(
         )
     ) { backStackEntry ->
         val url = backStackEntry.arguments?.getString("url")
-        InAppWebViewScreen(url = url)
+        InAppWebViewScreen(
+            modifier = Modifier,
+            url = url,
+            onBack = { navController.popBackStack() },
+        )
     }
 
     composable(
@@ -94,9 +112,10 @@ fun NavGraphBuilder.navigationBuilder(
     ) { backStackEntry ->
         val playlistId = backStackEntry.arguments?.getLong("playlistId") ?: 0L
         PlaylistDetailScreen(
+            modifier = Modifier,
             playlistId = playlistId,
             playerViewModel = playerViewModel,
-            navController = navController
+            navController = navController,
         )
     }
 
@@ -108,6 +127,7 @@ fun NavGraphBuilder.navigationBuilder(
     ) { backStackEntry ->
         val albumId = backStackEntry.arguments?.getLong("albumId") ?: 0L
         AlbumScreen(
+            modifier = Modifier,
             albumId = albumId,
             navController = navController,
             playerViewModel = playerViewModel,
@@ -122,6 +142,7 @@ fun NavGraphBuilder.navigationBuilder(
     ) { backStackEntry ->
         val artistId = backStackEntry.arguments?.getLong("artistId") ?: 0L
         ArtistScreen(
+            modifier = Modifier,
             artistId = artistId,
             navController = navController,
             playerViewModel = playerViewModel,

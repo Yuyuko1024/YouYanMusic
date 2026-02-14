@@ -1,21 +1,13 @@
 package com.youyuan.music.compose.ui.uicomponent
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -33,69 +25,12 @@ import com.moriafly.salt.ui.Icon
 import com.moriafly.salt.ui.ItemEdit
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
-import com.moriafly.salt.ui.TitleBar
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.icons.ArrowBack
 import com.moriafly.salt.ui.icons.SaltIcons
-import com.moriafly.salt.ui.noRippleClickable
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.constants.AppBarHeight
 import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-
-enum class TopAppBarType {
-    MAIN, SECONDARY, SEARCH
-}
-
-@UnstableSaltUiApi
-@Composable
-fun TopAppBar(
-    modifier: Modifier = Modifier,
-    title: String,
-    titleBarType: TopAppBarType = TopAppBarType.MAIN,
-    searchViewModel: SearchViewModel,
-    onBackClick: () -> Unit = { },
-    onDrawerClick: () -> Unit = { },
-    onSearchClick: () -> Unit = { },
-) {
-    // 使用 AnimatedContent 实现淡入淡出动画
-    AnimatedContent(
-        targetState = titleBarType,
-        transitionSpec = {
-            fadeIn() togetherWith fadeOut()
-        },
-        modifier = modifier,
-        label = "TopAppBarTransition"
-    ) { targetType ->
-        when (targetType) {
-            TopAppBarType.MAIN ->
-                MainTopAppBar(
-                    title = title,
-                    onDrawerClick = onDrawerClick,
-                    onSearchClick = onSearchClick
-                )
-
-            TopAppBarType.SECONDARY ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TitleBar(
-                        onBack = onBackClick,
-                        text = title,
-                        showBackBtn = true
-                    )
-                }
-
-            TopAppBarType.SEARCH -> {
-                SearchTopAppBar(
-                    searchViewModel = searchViewModel,
-                    onBackClick = onBackClick
-                )
-            }
-        }
-    }
-}
 
 @UnstableSaltUiApi
 @Composable
@@ -106,7 +41,9 @@ fun MainTopAppBar(
     onSearchClick: () -> Unit = { }
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(AppBarHeight),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(
@@ -148,7 +85,9 @@ fun SearchTopAppBar(
     val searchQuery by searchViewModel.searchQueryText.collectAsState()
 
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(AppBarHeight),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val backButtonContentDescription = stringResource(R.string.back_btn)

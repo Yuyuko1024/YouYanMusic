@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,6 +41,8 @@ import com.moriafly.salt.ui.ItemOuterTextButton
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
+import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.api.model.CommentItem
 import com.youyuan.music.compose.ui.viewmodel.SongCommentViewModel
 import compose.icons.TablerIcons
@@ -50,6 +53,7 @@ import compose.icons.tablericons.Heart
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun SongCommentScreen(
+    modifier: Modifier = Modifier,
     navController: NavHostController,
     songId: Long,
     viewModel: SongCommentViewModel = hiltViewModel(),
@@ -71,15 +75,26 @@ fun SongCommentScreen(
         onRefresh = { viewModel.load(songId, forceRefresh = true) },
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pullRefresh(pullRefreshState)
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+    ScreenScaffold(
+        modifier = modifier,
+        useContentPadding = true,
+        topBar = {
+            YouYanTitleBar(
+                onBack = { navController.popBackStack() },
+                text = stringResource(R.string.comments_title),
+            )
+        },
+    ) { padding: PaddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .pullRefresh(pullRefreshState)
         ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
             item {
                 Text(
                     text = buildString {
@@ -168,6 +183,7 @@ fun SongCommentScreen(
                 CircularProgressIndicator()
             }
         }
+    }
     }
 }
 

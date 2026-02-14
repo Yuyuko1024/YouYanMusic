@@ -7,6 +7,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,8 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.ui.uicomponent.SearchTopAppBar
+import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
 import compose.icons.TablerIcons
@@ -53,15 +56,30 @@ import compose.icons.tablericons.Notes
 fun SearchScreen(
     modifier: Modifier = Modifier,
     searchViewModel: SearchViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel = hiltViewModel()
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+    onBackClick: () -> Unit = {},
 ) {
 
     val searchSuggestions by searchViewModel.searchSuggestions.collectAsState()
     val searchResults by searchViewModel.searchResults.collectAsState()
     val isLoading by searchViewModel.isLoading.collectAsState()
 
-    Box(modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
+    ScreenScaffold(
+        modifier = modifier,
+        useContentPadding = true,
+        topBar = {
+            SearchTopAppBar(
+                searchViewModel = searchViewModel,
+                onBackClick = onBackClick,
+            )
+        },
+    ) { padding: PaddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            Column(Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.height(8.dp))
 
             // 什么都不做时显示的默认内容
@@ -125,90 +143,91 @@ fun SearchScreen(
             }
         }
 
-        // 搜索建议列表
-        AnimatedVisibility(
-            visible = searchSuggestions.isNotEmpty(),
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTapGestures {
-                            searchViewModel.clearSearchSuggestions()
-                        }
-                    }
+            // 搜索建议列表
+            AnimatedVisibility(
+                visible = searchSuggestions.isNotEmpty(),
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
-                // 背景遮罩层
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(SaltTheme.colors.subText.copy(alpha = 0.3f))
+                        .pointerInput(Unit) {
+                            detectTapGestures {
+                                searchViewModel.clearSearchSuggestions()
+                            }
+                        }
                 ) {
-                    Column(
+                    // 背景遮罩层
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxSize(0.5f)
-                            .background(SaltTheme.colors.background)
-                            .pointerInput(Unit) {
-                                detectTapGestures { }
-                            }
+                            .fillMaxSize()
+                            .background(SaltTheme.colors.subText.copy(alpha = 0.3f))
                     ) {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize()
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxSize(0.5f)
+                                .background(SaltTheme.colors.background)
+                                .pointerInput(Unit) {
+                                    detectTapGestures { }
+                                }
                         ) {
-                            item {
-                                Text(
-                                    text = stringResource(R.string.search_suggestions),
-                                    style = SaltTheme.textStyles.main,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                                )
-                            }
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                item {
+                                    Text(
+                                        text = stringResource(R.string.search_suggestions),
+                                        style = SaltTheme.textStyles.main,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                    )
+                                }
 
-                            items(
-                                items = searchSuggestions,
-                                key = { it }
-                            ) { suggestion ->
-                                SearchSuggestItem(
-                                    title = suggestion,
-                                    onClick = {
-                                        searchViewModel.clearSearchSuggestions()
-                                        searchViewModel.searchSongs(suggestion)
-                                    }
-                                )
+                                items(
+                                    items = searchSuggestions,
+                                    key = { it }
+                                ) { suggestion ->
+                                    SearchSuggestItem(
+                                        title = suggestion,
+                                        onClick = {
+                                            searchViewModel.clearSearchSuggestions()
+                                            searchViewModel.searchSongs(suggestion)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // 加载状态（叠加在最上层）
-        AnimatedVisibility(
-            visible = isLoading,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                contentAlignment = Alignment.TopCenter
+            // 加载状态（叠加在最上层）
+            AnimatedVisibility(
+                visible = isLoading,
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
-                RoundedColumn {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.searching),
-                            modifier = Modifier.padding(start = 12.dp)
-                        )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    RoundedColumn {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.searching),
+                                modifier = Modifier.padding(start = 12.dp)
+                            )
+                        }
                     }
                 }
             }

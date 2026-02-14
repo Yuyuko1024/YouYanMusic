@@ -7,8 +7,8 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.DrawerValue
@@ -40,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -61,7 +59,6 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.dialog.InputDialog
 import com.youyuan.music.compose.R
-import com.youyuan.music.compose.constants.AppBarHeight
 import com.youyuan.music.compose.constants.MiniPlayerHeight
 import com.youyuan.music.compose.constants.NavigationBarAnimationSpec
 import com.youyuan.music.compose.constants.NavigationBarHeight
@@ -70,11 +67,7 @@ import com.youyuan.music.compose.ui.player.COLLAPSED_ANCHOR
 import com.youyuan.music.compose.ui.player.rememberBottomSheetState
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.screens.navigationBuilder
-import com.youyuan.music.compose.ui.uicomponent.TopAppBar
-import com.youyuan.music.compose.ui.uicomponent.TopAppBarType
 import com.youyuan.music.compose.ui.utils.LocalPlayerAwareWindowInsets
-import com.youyuan.music.compose.ui.utils.appBarScrollBehavior
-import com.youyuan.music.compose.ui.utils.canGoBack
 import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
@@ -181,14 +174,6 @@ fun RootView(
             label = "",
         )
 
-        val topAppBarScrollBehavior =
-            appBarScrollBehavior(
-                canScroll = {
-                    // HACK: 临时设置，后续判断是否可以滚动
-                    true
-                }
-            )
-
         // 计算播放器折叠状态下的边界高度
         val animatedCollapsedBound by animateDpAsState(
             targetValue = bottomInset + (if (shouldShowNavigationBar) NavigationBarHeight else 0.dp) + MiniPlayerHeight,
@@ -203,13 +188,13 @@ fun RootView(
                 initialAnchor = COLLAPSED_ANCHOR
             )
 
-        // 智能的WindowInsets计算
+        // WindowInsets：仅提供水平安全区 + 底部（mini player / bottom bar）安全区
         val playerAwareWindowInsets = remember(bottomInset, shouldShowNavigationBar) {
             var bottom = bottomInset + MiniPlayerHeight
             if (shouldShowNavigationBar) bottom += NavigationBarHeight
             windowsInsets
-                .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
-                .add(WindowInsets(top = AppBarHeight, bottom = bottom))
+            .only(WindowInsetsSides.Horizontal)
+            .add(WindowInsets(bottom = bottom))
         }
 
         // 记录当前的主屏幕路由，默认为 Explore
@@ -219,26 +204,6 @@ fun RootView(
         // 当路由变化时，如果新路由是主屏幕之一，则更新状态
         if (ScreenRoute.MainScreens.any { it.route == currentRoute }) {
             currentRoute?.let { currentMainScreenRoute.value = it }
-        }
-
-        // 判断是否为二级页面
-        val isSecondaryScreen = remember(currentRoute) {
-            currentRoute != null && !ScreenRoute.MainScreens.any { it.route == currentRoute }
-        }
-
-        // 根据当前路由设置标题
-        val title = when {
-            currentRoute == ScreenRoute.Explore.route -> stringResource(R.string.title_explore)
-            currentRoute == ScreenRoute.Profile.route -> stringResource(R.string.title_profile)
-            currentRoute == ScreenRoute.Settings.route -> stringResource(R.string.drawer_settings)
-            currentRoute == ScreenRoute.LoginPage.route -> stringResource(R.string.title_login)
-            currentRoute == ScreenRoute.RegisterPage.route -> stringResource(R.string.title_register)
-            currentRoute?.startsWith("comments/") == true -> stringResource(R.string.comments_title)
-            currentRoute?.startsWith("playlist/") == true -> stringResource(R.string.title_playlist)
-            currentRoute == ScreenRoute.InAppWebView.route -> stringResource(R.string.title_webview)
-            currentRoute?.startsWith("album/") == true -> stringResource(R.string.title_album)
-            currentRoute?.startsWith("artist/") == true -> stringResource(R.string.title_artist)
-            else -> stringResource(R.string.app_name)
         }
 
         CompositionLocalProvider(
@@ -264,67 +229,46 @@ fun RootView(
                 },
                 gesturesEnabled = false
             ) {
-                // 获取当前 TopAppBar 类型
-                val currentTopAppBarType = when {
-                    currentRoute == ScreenRoute.Search.route -> TopAppBarType.SEARCH
-                    isSecondaryScreen -> TopAppBarType.SECONDARY
-                    else -> TopAppBarType.MAIN
-                }
-
-                TopAppBar(
-                    modifier = modifier.systemBarsPadding(),
-                    title = title,
-                    titleBarType = currentTopAppBarType,
-                    searchViewModel = searchViewModel,
-                    onBackClick = {
-                        if (navController.canGoBack) {
-                            navController.popBackStack()
-                        }
-                    },
-                    onDrawerClick = {
-                        scope.launch {
-                            if (drawerState.isClosed) {
-                                drawerState.open()
-                            } else {
-                                drawerState.close()
-                            }
-                        }
-                    },
-                    onSearchClick = {
-                        navController.navigate(
-                            ScreenRoute.Search.route
-                        )
-                    }
-                )
                 NavHost(
                     navController = navController,
                     startDestination = ScreenRoute.Explore.route,
                     enterTransition = {
-                        fadeIn(animationSpec = tween(500))
+                        slideInHorizontally(
+                            animationSpec = tween(500),
+                            initialOffsetX = { fullWidth -> fullWidth }
+                        )
                     },
                     exitTransition = {
-                        fadeOut(animationSpec = tween(500))
+                        slideOutHorizontally(
+                            animationSpec = tween(500),
+                            targetOffsetX = { fullWidth -> -fullWidth }
+                        )
                     },
                     popEnterTransition = {
-                        fadeIn(animationSpec = tween(500))
+                        slideInHorizontally(
+                            animationSpec = tween(500),
+                            initialOffsetX = { fullWidth -> -fullWidth }
+                        )
                     },
                     popExitTransition = {
-                        fadeOut(animationSpec = tween(500))
+                        slideOutHorizontally(
+                            animationSpec = tween(500),
+                            targetOffsetX = { fullWidth -> fullWidth }
+                        )
                     },
                     modifier = Modifier
-                        .nestedScroll(
-                            topAppBarScrollBehavior.nestedScrollConnection
-                        )
-                        // 为NavHost添加智能边距
-                        .windowInsetsPadding(playerAwareWindowInsets)
                 ) {
                     navigationBuilder(
                         context = context,
                         navController = navController,
-                        scrollBehavior = topAppBarScrollBehavior,
                         searchViewModel = searchViewModel,
                         playerViewModel = playerViewModel,
                         profileViewModel = profileViewModel,
+                        openDrawer = {
+                            scope.launch {
+                                if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                            }
+                        },
                     )
                 }
 

@@ -48,7 +48,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.Alignment
 import coil3.compose.AsyncImage
 import com.moriafly.salt.ui.SaltTheme
+import androidx.compose.ui.res.stringResource
+import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.UserPlaylistItem
+import com.youyuan.music.compose.ui.view.MainTabScaffold
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @ExperimentalFoundationApi
@@ -60,6 +63,8 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
     context: Context,
+    openDrawer: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
     profileViewModel: ProfileViewModel = hiltViewModel(),
 ) {
     // 获取用户信息和登录状态
@@ -74,122 +79,133 @@ fun ProfileScreen(
         profileViewModel.loadUserPlaylists(isLoggedIn = isLoggedIn)
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val uid = userProfile?.userId
-        val likedPlaylistItem: UserPlaylistItem? = if (isLoggedIn && uid != null) {
-            userPlaylists.firstOrNull {
-                it.creator?.userId == uid && it.name == "${userProfile?.nickname}喜欢的音乐"
-            }
-        } else null
-
-        val likedPlaylistId = likedPlaylistItem?.id
-
-        val createdPlaylists = if (isLoggedIn && uid != null) {
-            userPlaylists.filter { it.creator?.userId == uid && it.id != likedPlaylistId }
-        } else {
-            emptyList()
-        }
-        val subscribedPlaylists = if (isLoggedIn && uid != null) {
-            userPlaylists.filter { it.creator?.userId != null && it.creator.userId != uid }
-        } else {
-            emptyList()
-        }
-        val pullRefreshState = rememberPullRefreshState(
-            refreshing = userPlaylistsLoading,
-            onRefresh = {
-                if (isLoggedIn) {
-                    profileViewModel.getLoginStatus()
-                    profileViewModel.loadUserPlaylists(isLoggedIn = true, force = true)
-                }
-            },
-        )
-
-        Box(
-            modifier = Modifier
+    MainTabScaffold(
+        title = stringResource(R.string.title_profile),
+        onDrawerClick = openDrawer,
+        onSearchClick = onSearchClick,
+        modifier = modifier,
+    ) { padding ->
+        BoxWithConstraints(
+            Modifier
                 .fillMaxSize()
-                .pullRefresh(pullRefreshState)
+                .padding(padding)
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                item {
-                    AccountHeaderCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        profile = if (isLoggedIn) userProfile else null,
-                        onClick = {
-                            if (!isLoggedIn) {
-                                navController.navigate(ScreenRoute.LoginPage.route)
-                            } else {
-                                // TODO: 实现用户详情页或退出登录功能
-                            }
-                        }
-                    )
+            val uid = userProfile?.userId
+            val likedPlaylistItem: UserPlaylistItem? = if (isLoggedIn && uid != null) {
+                userPlaylists.firstOrNull {
+                    it.creator?.userId == uid && it.name == "${userProfile?.nickname}喜欢的音乐"
                 }
+            } else null
 
-                if (!isLoggedIn) {
-                    item {
-                        RoundedColumn(Modifier.fillMaxWidth()) {
-                            Text(
-                                text = "登录后可查看你的歌单",
-                                modifier = Modifier.padding(12.dp)
-                            )
-                            ItemButton(
-                                text = "去登录",
-                                onClick = { navController.navigate(ScreenRoute.LoginPage.route) }
-                            )
-                        }
+            val likedPlaylistId = likedPlaylistItem?.id
+
+            val createdPlaylists = if (isLoggedIn && uid != null) {
+                userPlaylists.filter { it.creator?.userId == uid && it.id != likedPlaylistId }
+            } else {
+                emptyList()
+            }
+            val subscribedPlaylists = if (isLoggedIn && uid != null) {
+                userPlaylists.filter { it.creator?.userId != null && it.creator.userId != uid }
+            } else {
+                emptyList()
+            }
+            val pullRefreshState = rememberPullRefreshState(
+                refreshing = userPlaylistsLoading,
+                onRefresh = {
+                    if (isLoggedIn) {
+                        profileViewModel.getLoginStatus()
+                        profileViewModel.loadUserPlaylists(isLoggedIn = true, force = true)
                     }
-                } else {
-                    if (!userPlaylistsError.isNullOrBlank()) {
+                },
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pullRefresh(pullRefreshState)
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    item {
+                        AccountHeaderCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            profile = if (isLoggedIn) userProfile else null,
+                            onClick = {
+                                if (!isLoggedIn) {
+                                    navController.navigate(ScreenRoute.LoginPage.route)
+                                } else {
+                                    // TODO: 实现用户详情页或退出登录功能
+                                }
+                            }
+                        )
+                    }
+
+                    if (!isLoggedIn) {
                         item {
                             RoundedColumn(Modifier.fillMaxWidth()) {
                                 Text(
-                                    text = userPlaylistsError ?: "",
+                                    text = "登录后可查看你的歌单",
                                     modifier = Modifier.padding(12.dp)
                                 )
                                 ItemButton(
-                                    text = "重试",
-                                    onClick = { profileViewModel.loadUserPlaylists(isLoggedIn = true, force = true) }
+                                    text = "去登录",
+                                    onClick = { navController.navigate(ScreenRoute.LoginPage.route) }
                                 )
                             }
                         }
-                    }
-
-                    // “我喜欢的音乐”单独展示：不加小标题，放在“创建的歌单”上方。
-                    likedPlaylistItem?.let { pl ->
-                        item(key = pl.id) {
-                            PlaylistCard(
-                                playlist = pl,
-                                onClick = {
-                                    navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
+                    } else {
+                        if (!userPlaylistsError.isNullOrBlank()) {
+                            item {
+                                RoundedColumn(Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text = userPlaylistsError ?: "",
+                                        modifier = Modifier.padding(12.dp)
+                                    )
+                                    ItemButton(
+                                        text = "重试",
+                                        onClick = { profileViewModel.loadUserPlaylists(isLoggedIn = true, force = true) }
+                                    )
                                 }
-                            )
+                            }
                         }
-                    }
 
-                    if (createdPlaylists.isNotEmpty()) {
-                        item { ItemOuterTitle("创建的歌单") }
-                        items(createdPlaylists, key = { it.id }) { pl ->
-                            PlaylistCard(
-                                playlist = pl,
-                                onClick = {
-                                    navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
-                                }
-                            )
+                        // “我喜欢的音乐”单独展示：不加小标题，放在“创建的歌单”上方。
+                        likedPlaylistItem?.let { pl ->
+                            item(key = pl.id) {
+                                PlaylistCard(
+                                    playlist = pl,
+                                    onClick = {
+                                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
+                                    }
+                                )
+                            }
                         }
-                    }
 
-                    if (subscribedPlaylists.isNotEmpty()) {
-                        item { ItemOuterTitle("收藏的歌单") }
-                        items(subscribedPlaylists, key = { it.id }) { pl ->
-                            PlaylistCard(
-                                playlist = pl,
-                                onClick = {
-                                    navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
-                                }
-                            )
+                        if (createdPlaylists.isNotEmpty()) {
+                            item { ItemOuterTitle("创建的歌单") }
+                            items(createdPlaylists, key = { it.id }) { pl ->
+                                PlaylistCard(
+                                    playlist = pl,
+                                    onClick = {
+                                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
+                                    }
+                                )
+                            }
+                        }
+
+                        if (subscribedPlaylists.isNotEmpty()) {
+                            item { ItemOuterTitle("收藏的歌单") }
+                            items(subscribedPlaylists, key = { it.id }) { pl ->
+                                PlaylistCard(
+                                    playlist = pl,
+                                    onClick = {
+                                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
+                                    }
+                                )
+                            }
                         }
                     }
                 }

@@ -3,7 +3,9 @@ package com.youyuan.music.compose.ui.screens
 import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,6 +31,8 @@ import com.youyuan.music.compose.R
 import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
+import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
+import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import kotlinx.coroutines.launch
 
@@ -36,6 +40,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
+    onBack: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -62,91 +67,106 @@ fun SettingsScreen(
         stringResource(R.string.settings_action_restart)
     )
 
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            val popupState = rememberPopupState()
-            val isAndroid12OrAbove = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-            ItemOuterTitle(text = stringResource(R.string.settings_ui_title))
-            RoundedColumn {
-                ItemSwitcher(
-                    text = stringResource(R.string.settings_dynamic_color),
-                    state = isAppDynamicColorEnabled,
-                    enabled = isAndroid12OrAbove,
-                    onChange = { state ->
-                        coroutineScope.launch {
-                            settingsDataStore.setAppDynamicColorEnabled(state)
-                        }
-                    }
-                )
-                ItemSwitcher(
-                    text = stringResource(R.string.settings_player_wave),
-                    state = isPlayerSquigglyWaveEnabled,
-                    onChange = { state ->
-                        coroutineScope.launch {
-                            settingsDataStore.setPlayerSquigglyWaveEnabled(state)
-                        }
-                    }
-                )
-                ItemPopup(
-                    state = popupState,
-                    text = stringResource(R.string.settings_player_cover_type),
-                    sub = playerCoverTypeLabels[playerCoverType]
-                ) {
-                    playerCoverTypeLabels.forEachIndexed { index, label ->
-                        PopupMenuItem(
-                            text = label,
-                            selected = playerCoverType == index,
-                            onClick = {
-                                coroutineScope.launch {
-                                    settingsDataStore.setPlayerCoverType(
-                                        PlayerCoverType.entries[index]
-                                    )
-                                }
-                                popupState.dismiss()
-                            }
-                        )
-                    }
-                }
-            }
-            ItemOuterTitle(text = stringResource(R.string.settings_player_behavior))
-            RoundedColumn {
+    ScreenScaffold(
+        modifier = modifier,
+        useContentPadding = true,
+        topBar = {
+            YouYanTitleBar(
+                onBack = onBack,
+                text = stringResource(R.string.drawer_settings),
+            )
+        },
+    ) { padding: PaddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            Column(Modifier.fillMaxSize()) {
                 val popupState = rememberPopupState()
-                // 上一曲行为的设置
-                val currentAction by settingsDataStore.playerSeekToPreviousAction
-                    .collectAsState(initial = PlayerSeekToPreviousAction.DEFAULT.ordinal)
-                ItemPopup(
-                    state = popupState,
-                    text = stringResource(R.string.settings_seek_previous_action),
-                    sub = seekToPreviousActionLabels[currentAction]
-                ) {
-                    seekToPreviousActionLabels.forEachIndexed { index, label ->
-                        PopupMenuItem(
-                            text = label,
-                            selected = currentAction == index,
-                            onClick = {
-                                coroutineScope.launch {
-                                    setPlayerSeekToPreviousAction(
-                                        dataStore = settingsDataStore,
-                                        action = PlayerSeekToPreviousAction.entries[index]
-                                    )
-                                }
-                                popupState.dismiss()
+                val isAndroid12OrAbove = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                ItemOuterTitle(text = stringResource(R.string.settings_ui_title))
+                RoundedColumn {
+                    ItemSwitcher(
+                        text = stringResource(R.string.settings_dynamic_color),
+                        state = isAppDynamicColorEnabled,
+                        enabled = isAndroid12OrAbove,
+                        onChange = { state ->
+                            coroutineScope.launch {
+                                settingsDataStore.setAppDynamicColorEnabled(state)
                             }
-                        )
+                        }
+                    )
+                    ItemSwitcher(
+                        text = stringResource(R.string.settings_player_wave),
+                        state = isPlayerSquigglyWaveEnabled,
+                        onChange = { state ->
+                            coroutineScope.launch {
+                                settingsDataStore.setPlayerSquigglyWaveEnabled(state)
+                            }
+                        }
+                    )
+                    ItemPopup(
+                        state = popupState,
+                        text = stringResource(R.string.settings_player_cover_type),
+                        sub = playerCoverTypeLabels[playerCoverType]
+                    ) {
+                        playerCoverTypeLabels.forEachIndexed { index, label ->
+                            PopupMenuItem(
+                                text = label,
+                                selected = playerCoverType == index,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        settingsDataStore.setPlayerCoverType(
+                                            PlayerCoverType.entries[index]
+                                        )
+                                    }
+                                    popupState.dismiss()
+                                }
+                            )
+                        }
                     }
                 }
-            }
-
-            ItemOuterTitle(text = stringResource(R.string.settings_network_title))
-            RoundedColumn {
-                Item(
-                    text = stringResource(R.string.settings_api_endpoint),
-                    sub = effectiveApiUrl.ifBlank { stringResource(R.string.settings_api_endpoint_unset) },
-                    onClick = {
-                        apiUrlInput = effectiveApiUrl
-                        showApiDialog = true
+                ItemOuterTitle(text = stringResource(R.string.settings_player_behavior))
+                RoundedColumn {
+                    val popupState = rememberPopupState()
+                    // 上一曲行为的设置
+                    val currentAction by settingsDataStore.playerSeekToPreviousAction
+                        .collectAsState(initial = PlayerSeekToPreviousAction.DEFAULT.ordinal)
+                    ItemPopup(
+                        state = popupState,
+                        text = stringResource(R.string.settings_seek_previous_action),
+                        sub = seekToPreviousActionLabels[currentAction]
+                    ) {
+                        seekToPreviousActionLabels.forEachIndexed { index, label ->
+                            PopupMenuItem(
+                                text = label,
+                                selected = currentAction == index,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        setPlayerSeekToPreviousAction(
+                                            dataStore = settingsDataStore,
+                                            action = PlayerSeekToPreviousAction.entries[index]
+                                        )
+                                    }
+                                    popupState.dismiss()
+                                }
+                            )
+                        }
                     }
-                )
+                }
+
+                ItemOuterTitle(text = stringResource(R.string.settings_network_title))
+                RoundedColumn {
+                    Item(
+                        text = stringResource(R.string.settings_api_endpoint),
+                        sub = effectiveApiUrl.ifBlank { stringResource(R.string.settings_api_endpoint_unset) },
+                        onClick = {
+                            apiUrlInput = effectiveApiUrl
+                            showApiDialog = true
+                        }
+                    )
+                }
             }
         }
     }
