@@ -7,11 +7,13 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -20,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -34,6 +37,7 @@ import com.youyuan.music.compose.R
 import com.youyuan.music.compose.constants.PlayerCoverVerticalPadding
 import com.youyuan.music.compose.constants.PlayerHorizontalPadding
 import com.youyuan.music.compose.pref.PlayerCoverType
+import com.youyuan.music.compose.ui.uicomponent.AcrylicFlipAsyncImage
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
@@ -72,28 +76,21 @@ fun CoverPager(
 
         when (coverType) {
             PlayerCoverType.DEFAULT.ordinal -> {
-                Card(
+                Box(
                     modifier = Modifier
                         .align(Alignment.Center)
                         .aspectRatio(1f)
-                        .scale(1f),
-                    shape = RoundedCornerShape(16.dp),
+                        .scale(1f)
+                        .clip(RoundedCornerShape(16.dp)),
                 ) {
-                    // 封面图片
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(artworkUrl ?: R.drawable.ic_nav_music)
-                            .crossfade(true)
-                            .crossfade(1000)
-                            .error(R.drawable.ic_nav_music) // 错误时使用占位图
-                            .fallback(R.drawable.ic_nav_music) // URI为null时使用占位图
-                            .build(),
-                        modifier = Modifier
-                            .fillMaxWidth()
+                    AcrylicFlipAsyncImage(
+                        imageUrl = artworkUrl,
+                        modifier = Modifier.fillMaxWidth()
                             .aspectRatio(1f)
                             .scale(1f),
-                        contentDescription = "Cover Art",
-                        contentScale = ContentScale.Crop
+                        contentDescription = "Cover art",
+                        contentScale = ContentScale.Crop,
+                        shape = RoundedCornerShape(16.dp),
                     )
                 }
             }
