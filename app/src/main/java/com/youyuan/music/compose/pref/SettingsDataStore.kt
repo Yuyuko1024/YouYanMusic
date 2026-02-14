@@ -34,6 +34,9 @@ class SettingsDataStore(context: Context) {
 
         // 播放器音质（/song/url/v1 的 level）
         val PLAYER_AUDIO_QUALITY_LEVEL = stringPreferencesKey("player_audio_quality_level")
+
+        // 播放会话（播放列表 + 索引 + 进度）
+        val PLAYER_SESSION_JSON = stringPreferencesKey("player_session_json")
     }
 
     val appApiUrl: Flow<String> = dataStore.data
@@ -87,6 +90,11 @@ class SettingsDataStore(context: Context) {
             preferences[PLAYER_AUDIO_QUALITY_LEVEL] ?: AudioQualityLevel.default().level
         }
 
+    val playerSessionJson: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[PLAYER_SESSION_JSON].orEmpty()
+        }
+
     suspend fun setAppApiUrl(url: String) {
         dataStore.edit { settings ->
             settings[APP_API_URL] = url
@@ -122,6 +130,18 @@ class SettingsDataStore(context: Context) {
     suspend fun setPlayerAudioQualityLevel(level: String) {
         dataStore.edit { settings ->
             settings[PLAYER_AUDIO_QUALITY_LEVEL] = level
+        }
+    }
+
+    suspend fun setPlayerSessionJson(sessionJson: String) {
+        dataStore.edit { settings ->
+            settings[PLAYER_SESSION_JSON] = sessionJson
+        }
+    }
+
+    suspend fun clearPlayerSession() {
+        dataStore.edit { settings ->
+            settings.remove(PLAYER_SESSION_JSON)
         }
     }
 

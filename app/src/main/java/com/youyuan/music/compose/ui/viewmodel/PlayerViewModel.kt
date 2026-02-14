@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import com.google.gson.Gson
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.AlbumApi
@@ -41,6 +42,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -71,7 +74,21 @@ class PlayerViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         const val TAG = "PlayerViewModel"
+        private const val MAX_PERSISTED_PLAYLIST_SIZE = 500
+        private const val PLAYBACK_SESSION_SAVE_INTERVAL_MS = 5_000L
     }
+
+    private val gson = Gson()
+
+    private data class PersistedPlaybackSession(
+        val version: Int = 1,
+        val songIds: List<Long>,
+        val currentIndex: Int,
+        val currentSongId: Long?,
+        val positionMs: Long,
+        val wasPlaying: Boolean,
+        val updatedAtMs: Long,
+    )
 
     private val songUrlApi: SongUrlApi = apiClient.createService(SongUrlApi::class.java)
     private val albumApi: AlbumApi = apiClient.createService(AlbumApi::class.java)
@@ -194,6 +211,8 @@ class PlayerViewModel @Inject constructor(
     private var positionUpdateJob: Job? = null
     private var buildLikedPlaylistJob: Job? = null
     private var commentCountJob: Job? = null
+    private var playbackSessionSaveJob: Job? = null
+    private var playbackSessionRestoreAttempted = false
 
     private val commentCountCache = ConcurrentHashMap<Long, Int>()
 
@@ -483,6 +502,130 @@ class PlayerViewModel @Inject constructor(
 
         // 开始位置更新
         startPositionUpdates()
+
+        // 等待 PlayerController 连接后，尝试恢复一次播放会话
+        viewModelScope.launch {
+            playerController.isConnected
+                .filter { it }
+                .first()
+            restorePlaybackSessionIfNeeded()
+            // 恢复流程完成后再启动周期保存，避免冷启动时误清空已保存 session
+            startPlaybackSessionPersistence()
+        }
+    }
+
+    private fun startPlaybackSessionPersistence() {
+        playbackSessionSaveJob?.cancel()
+        playbackSessionSaveJob = viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                persistPlaybackSession(resetBeforeWrite = false)
+                delay(PLAYBACK_SESSION_SAVE_INTERVAL_MS)
+            }
+        }
+    }
+
+    private suspend fun persistPlaybackSession(resetBeforeWrite: Boolean) {
+        val list = PlayerPlaylistManager.playlist.value
+        if (list.isEmpty()) {
+            // 空列表可能是冷启动恢复前的瞬态状态，不在周期任务中主动清空持久化会话
+            return
+        }
+
+        val allIds = list.map { it.song.id }
+        if (allIds.isEmpty()) {
+            // 同上，避免误删最近一次可恢复会话
+            return
+        }
+
+        val (rawCurrentIndex, rawPositionMs) = onPlayerThread {
+            playerController.getCurrentMediaItemIndex() to playerController.getCurrentPosition()
+        }
+
+        val safeCurrentIndex = rawCurrentIndex
+            .coerceIn(0, (allIds.size - 1).coerceAtLeast(0))
+
+        val (persistedIds, adjustedIndex) = cropPersistedWindow(
+            songIds = allIds,
+            currentIndex = safeCurrentIndex,
+            maxSize = MAX_PERSISTED_PLAYLIST_SIZE,
+        )
+
+        val session = PersistedPlaybackSession(
+            songIds = persistedIds,
+            currentIndex = adjustedIndex,
+            currentSongId = persistedIds.getOrNull(adjustedIndex),
+            positionMs = rawPositionMs.coerceAtLeast(0L),
+            wasPlaying = isPlaying.value,
+            updatedAtMs = System.currentTimeMillis(),
+        )
+        if (resetBeforeWrite) {
+            settingsDataStore.clearPlayerSession()
+        }
+        settingsDataStore.setPlayerSessionJson(gson.toJson(session))
+    }
+
+    private fun cropPersistedWindow(
+        songIds: List<Long>,
+        currentIndex: Int,
+        maxSize: Int,
+    ): Pair<List<Long>, Int> {
+        if (songIds.size <= maxSize) {
+            val safeIndex = currentIndex.coerceIn(0, (songIds.size - 1).coerceAtLeast(0))
+            return songIds to safeIndex
+        }
+
+        val safeIndex = currentIndex.coerceIn(0, songIds.size - 1)
+        val half = maxSize / 2
+        var start = (safeIndex - half).coerceAtLeast(0)
+        var end = (start + maxSize).coerceAtMost(songIds.size)
+        start = (end - maxSize).coerceAtLeast(0)
+
+        val window = songIds.subList(start, end)
+        val adjustedIndex = (safeIndex - start).coerceIn(0, (window.size - 1).coerceAtLeast(0))
+        return window to adjustedIndex
+    }
+
+    private suspend fun restorePlaybackSessionIfNeeded() {
+        if (playbackSessionRestoreAttempted) return
+        playbackSessionRestoreAttempted = true
+
+        if (PlayerPlaylistManager.playlist.value.isNotEmpty()) return
+
+        val raw = settingsDataStore.playerSessionJson.first().trim()
+        if (raw.isBlank()) return
+
+        val session = runCatching {
+            gson.fromJson(raw, PersistedPlaybackSession::class.java)
+        }.getOrNull() ?: return
+
+        if (session.songIds.isEmpty()) return
+
+        val sessionId = newBuildSessionId()
+        buildLikedPlaylistJob?.cancel()
+
+        val cappedIds = session.songIds.take(MAX_PERSISTED_PLAYLIST_SIZE)
+        setFullPlaylistIds(cappedIds)
+
+        val items = buildPlaylistItemsByIds(cappedIds)
+        if (items.isEmpty()) return
+
+        val indexBySongId = session.currentSongId?.let { songId ->
+            cappedIds.indexOf(songId).takeIf { it >= 0 }
+        }
+        val restoreIndex = (indexBySongId ?: session.currentIndex)
+            .coerceIn(0, (items.size - 1).coerceAtLeast(0))
+
+        commitSetPlaylist(
+            sessionId = sessionId,
+            items = items,
+            startIndex = restoreIndex,
+            startPlay = false,
+        )
+
+        val seekPos = session.positionMs.coerceAtLeast(0L)
+        onPlayerThread {
+            playerController.getPlayer()?.seekTo(restoreIndex, seekPos)
+        }
     }
 
     private suspend fun fetchLyrics(songId: Long): String? = withContext(Dispatchers.IO) {
@@ -628,8 +771,8 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private suspend fun onPlayerThread(block: () -> Unit) {
-        withContext(Dispatchers.Main.immediate) { block() }
+    private suspend fun <T> onPlayerThread(block: () -> T): T {
+        return withContext(Dispatchers.Main.immediate) { block() }
     }
 
     private suspend fun commitSetPlaylist(
@@ -660,6 +803,9 @@ class PlayerViewModel @Inject constructor(
                 )
             }
         }
+
+        // 按需求：整体替换播放列表时，先清空旧 session 再写入新 session
+        persistPlaybackSession(resetBeforeWrite = true)
     }
 
     private suspend fun commitAddItemsAppend(
@@ -884,6 +1030,9 @@ class PlayerViewModel @Inject constructor(
         _currentAlbumArtUrl.value = null
         _currentSongIndex.value = 0
         _lyrics.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            settingsDataStore.clearPlayerSession()
+        }
     }
 
     fun removeSongInPlaylistById(songId: Long?) {
@@ -916,6 +1065,10 @@ class PlayerViewModel @Inject constructor(
 
             _loadedSongIds.remove(songId)
             _preparedItemCache.remove(songId)
+
+            viewModelScope.launch(Dispatchers.IO) {
+                persistPlaybackSession(resetBeforeWrite = false)
+            }
         }
     }
 
@@ -970,6 +1123,10 @@ class PlayerViewModel @Inject constructor(
 
                     val mediaItem = PlayerPlaylistManager.buildMediaItem(songDetail, playUrl, albumArtUrl)
                     playerController.addAndPlay(mediaItem)
+
+                    withContext(Dispatchers.IO) {
+                        persistPlaybackSession(resetBeforeWrite = false)
+                    }
                 } else {
                     _error.value = "无法获取歌曲播放链接"
                 }
