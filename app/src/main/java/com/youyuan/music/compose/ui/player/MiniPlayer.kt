@@ -1,14 +1,18 @@
 package com.youyuan.music.compose.ui.player
 
 import android.content.Context
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -29,9 +33,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImage
@@ -42,11 +48,14 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.ui.theme.UiDimens
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import compose.icons.TablerIcons
 import compose.icons.tablericons.PlayerPause
 import compose.icons.tablericons.PlayerPlay
 import compose.icons.tablericons.Playlist
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @UnstableSaltUiApi
 @ExperimentalMaterial3Api
@@ -59,6 +68,24 @@ fun MiniPlayer(
     playerViewModel: PlayerViewModel,
     onPlaylistClick: () -> Unit = {},
 ) {
+    var dragOffsetX by remember { mutableStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val maxSwipeOffsetPx = with(density) { UiDimens.miniPlayerSwipeMaxOffset.toPx() }
+    val triggerOffsetPx = maxSwipeOffsetPx * UiDimens.miniPlayerSwipeTriggerRatio
+    val animatedOffsetX by animateFloatAsState(
+        targetValue = dragOffsetX,
+        animationSpec = if (isDragging) {
+            tween(durationMillis = 0)
+        } else {
+            spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        },
+        label = "mini_player_swipe_offset"
+    )
+
 
     // 当前Song对象
     val currentSong = playerViewModel.currentSong.collectAsState().value
@@ -81,6 +108,26 @@ fun MiniPlayer(
     val title = if (aliasText != null) "$baseTitle（$aliasText）" else baseTitle
     // 艺术家
     val artistName = playerViewModel.currentArtistNames.collectAsState().value
+    val playlist = playerViewModel.playlist.collectAsState().value
+    val player = playerViewModel.getPlayer()
+
+    val isInTriggerZone = isDragging && abs(dragOffsetX) >= triggerOffsetPx
+    val targetSongName = remember(playlist, dragOffsetX, player?.currentMediaItemIndex) {
+        if (playlist.isEmpty()) return@remember null
+
+        val targetIndex = if (dragOffsetX < 0f) {
+            player?.nextMediaItemIndex
+        } else if (dragOffsetX > 0f) {
+            player?.previousMediaItemIndex
+        } else {
+            null
+        }
+
+        targetIndex
+            ?.takeIf { it in playlist.indices }
+            ?.let { playlist[it].song.name }
+            ?.takeIf { it.isNotBlank() }
+    }
 
     Row(
         modifier = modifier
@@ -93,53 +140,98 @@ fun MiniPlayer(
                 .align(Alignment.CenterVertically)
         )
         // 封面图片容器和背景
-        Card(
+        Row(
             modifier = Modifier
-                .size(58.dp)
-                .padding(4.dp)
-                .align(Alignment.CenterVertically),
-            shape = RoundedCornerShape(8.dp),
+                .weight(1f)
+                .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
+                .pointerInput(maxSwipeOffsetPx, triggerOffsetPx) {
+                    detectHorizontalDragGestures(
+                        onDragStart = {
+                            isDragging = true
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            dragOffsetX = (dragOffsetX + dragAmount)
+                                .coerceIn(-maxSwipeOffsetPx, maxSwipeOffsetPx)
+                        },
+                        onDragCancel = {
+                            isDragging = false
+                            dragOffsetX = 0f
+                        },
+                        onDragEnd = {
+                            val shouldTrigger = abs(dragOffsetX) >= triggerOffsetPx
+                            val endOffset = dragOffsetX
+                            isDragging = false
+                            dragOffsetX = 0f
+                            if (shouldTrigger) {
+                                if (endOffset < 0f) {
+                                    playerViewModel.skipToNext()
+                                } else {
+                                    playerViewModel.skipToPrevious()
+                                }
+                            }
+                        }
+                    )
+                }
+                .align(Alignment.CenterVertically)
         ) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(currentArtworkUrl ?: R.drawable.ic_nav_music) // 默认图片,
-                    .crossfade(true)
-                    .crossfade(1000)
-                    .build(),
+            Card(
                 modifier = Modifier
                     .size(58.dp)
-                    .align(Alignment.CenterHorizontally),
-                contentDescription = "Cover art",
-                alignment = Alignment.Center,
-                contentScale = ContentScale.Crop
+                    .padding(4.dp)
+                    .align(Alignment.CenterVertically),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(currentArtworkUrl ?: R.drawable.ic_nav_music) // 默认图片,
+                        .crossfade(true)
+                        .crossfade(1000)
+                        .build(),
+                    modifier = Modifier
+                        .size(58.dp)
+                        .align(Alignment.CenterHorizontally),
+                    contentDescription = "Cover art",
+                    alignment = Alignment.Center,
+                    contentScale = ContentScale.Crop
+                )
+            }
+            Spacer(
+                modifier = Modifier
+                    .padding(horizontal = 4.dp, vertical = 4.dp)
+                    .align(Alignment.CenterVertically)
             )
+            Column(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .align(Alignment.CenterVertically)
+            ) {
+                Text(
+                    text = title,
+                    style = SaltTheme.textStyles.main,
+                    modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
+                    maxLines = 1,
+                )
+                Text(
+                    text = if (isInTriggerZone) {
+                        targetSongName?.let { "松手播放：$it" } ?: "松手播放"
+                    } else {
+                        artistName
+                    },
+                    style = SaltTheme.textStyles.sub,
+                    maxLines = 1,
+                    color = if (isInTriggerZone) SaltTheme.colors.highlight else SaltTheme.colors.subText
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
         }
-        // 间隔8dp
+
+        // 保持原布局间距，控制区不参与拖拽
         Spacer(
             modifier = Modifier
                 .padding(horizontal = 4.dp, vertical = 4.dp)
                 .align(Alignment.CenterVertically)
-        )
-        // 歌曲信息容器
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(8.dp)
-                .align(Alignment.CenterVertically)
-        ) {
-            Text(
-                text = title,
-                style = SaltTheme.textStyles.main,
-                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
-                maxLines = 1,
             )
-            Text(
-                text = artistName,
-                style = SaltTheme.textStyles.sub,
-                maxLines = 1,
-                color = SaltTheme.colors.subText
-            )
-        }
 
         // 将播放控制相关组件封装起来
         PlayerControls(
