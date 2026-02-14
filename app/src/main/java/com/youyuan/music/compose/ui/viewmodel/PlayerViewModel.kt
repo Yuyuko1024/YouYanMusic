@@ -1199,7 +1199,7 @@ class PlayerViewModel @Inject constructor(
 
                 val windowStart = (targetIndex - beforeCount).coerceAtLeast(0)
                 val windowEndExclusive = (targetIndex + afterCount + 1).coerceAtMost(allSongIds.size)
-                val windowIds = allSongIds.subList(windowStart, windowEndExclusive)
+                allSongIds.subList(windowStart, windowEndExclusive)
 
                 // 1) 目标歌曲优先：先插入无 URL 的占位 Item，URL 在真正播放时再加载
                 val targetItem = buildPlaylistItemsByIds(listOf(targetSongId)).firstOrNull()
@@ -1278,7 +1278,7 @@ class PlayerViewModel @Inject constructor(
         val pending = ids.filter { !_loadedSongIds.contains(it) }
         if (pending.isEmpty()) return emptyList()
 
-        val cached = pending.mapNotNull { _preparedItemCache[it] }
+        pending.mapNotNull { _preparedItemCache[it] }
         val missing = pending.filter { !_preparedItemCache.containsKey(it) }
         if (missing.isEmpty()) {
             // 严格按 pending 顺序返回
