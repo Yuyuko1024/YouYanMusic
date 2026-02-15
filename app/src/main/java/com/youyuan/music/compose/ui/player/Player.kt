@@ -8,6 +8,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -70,6 +71,8 @@ import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.utils.PlayerForegroundColorLight
 import com.youyuan.music.compose.ui.utils.getPlayerUIColor
+import com.youyuan.music.compose.ui.utils.getRememberedPlayerUIColor
+import com.youyuan.music.compose.ui.utils.rememberPlayerUIColor
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.utils.Logger
@@ -215,7 +218,7 @@ fun BottomSheetPlayer(
 
     // 播放器UI部分前景染色
     var playerUIColor by remember {
-        mutableStateOf(getPlayerUIColor(isSystemInDarkTheme))
+        mutableStateOf(getRememberedPlayerUIColor(isSystemInDarkTheme))
     }
 
     // 封面是否加载完成
@@ -243,9 +246,14 @@ fun BottomSheetPlayer(
         // 更新播放器UI颜色逻辑
         playerUIColor = when {
             // 当没有播放内容或封面未加载完成时，根据系统主题决定颜色
-            currentSong == null || !coverLoaded -> getPlayerUIColor(isSystemInDarkTheme)
+            currentSong == null -> getPlayerUIColor(isSystemInDarkTheme)
+            !coverLoaded -> getRememberedPlayerUIColor(isSystemInDarkTheme)
             // 当有播放内容且封面加载完成时，使用浅色前景
             else -> PlayerForegroundColorLight
+        }
+
+        if (currentSong != null) {
+            rememberPlayerUIColor(playerUIColor)
         }
 
         Logger.debug("BottomSheetPlayer",
@@ -294,6 +302,8 @@ fun BottomSheetPlayer(
     }
 
 
+    val enableFlowingBackground = !state.isCollapsed && state.progress > 0.05f
+
     BottomSheet(
         state = state,
         modifier = modifier,
@@ -313,15 +323,22 @@ fun BottomSheetPlayer(
             )
         },
         backgroundContent = {
-            // 流光溢彩背景
-            FlowingLightCanvasBackground(
-                isPlaying = isPlaying,
-                imageUrl = currentArtworkUrl,
-                modifier = Modifier.fillMaxSize(),
-                onImageLoadResult = { result ->
-                    coverLoaded = result
-                },
-            )
+            if (enableFlowingBackground) {
+                FlowingLightCanvasBackground(
+                    isPlaying = isPlaying,
+                    imageUrl = currentArtworkUrl,
+                    modifier = Modifier.fillMaxSize(),
+                    onImageLoadResult = { result ->
+                        coverLoaded = result
+                    },
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.2f))
+                )
+            }
         }
     ) {
         CompositionLocalProvider(

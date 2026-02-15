@@ -7,11 +7,10 @@ import android.graphics.Color.argb
 import android.graphics.Color.colorToHSV
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,8 +18,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -31,10 +32,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.isActive
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -61,6 +61,32 @@ private object FlowingLightPaletteCache {
     val byUrl = mutableMapOf<String, PaletteState>()
 }
 
+private fun buildFallbackPalette(isDarkTheme: Boolean): PaletteState {
+    return if (isDarkTheme) {
+        PaletteState(
+            blobColors = listOf(
+                Color(0xFF2A2238),
+                Color(0xFF23324A),
+                Color(0xFF3A2448),
+                Color(0xFF1E2C38),
+                Color(0xFF2B2636),
+            ),
+            backgroundColor = Color(0xFF0E0E14),
+        )
+    } else {
+        PaletteState(
+            blobColors = listOf(
+                Color(0xFFC9D3F6),
+                Color(0xFFD5CFF2),
+                Color(0xFFC6D9EE),
+                Color(0xFFDCCDEA),
+                Color(0xFFCBD7F4),
+            ),
+            backgroundColor = Color(0xFFF2F4FA),
+        )
+    }
+}
+
 @Composable
 fun FlowingLightCanvasBackground(
     isPlaying: Boolean,
@@ -69,23 +95,19 @@ fun FlowingLightCanvasBackground(
     onImageLoadResult: ((Boolean) -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val isSystemDarkTheme = isSystemInDarkTheme()
     val density = LocalDensity.current
     val processor = remember { FlowingLightProcessor(context) }
+    val fallbackPalette = remember(isSystemDarkTheme) { buildFallbackPalette(isSystemDarkTheme) }
 
     val cachedInitial = remember { FlowingLightPaletteCache.lastState }
+    val initialPalette = remember(imageUrl, cachedInitial, fallbackPalette) {
+        if (imageUrl.isNullOrBlank()) fallbackPalette else (cachedInitial ?: fallbackPalette)
+    }
 
     var paletteState by remember {
         mutableStateOf(
-            cachedInitial ?: PaletteState(
-                blobColors = listOf(
-                    Color(0xFF2A2238),
-                    Color(0xFF23324A),
-                    Color(0xFF3A2448),
-                    Color(0xFF1E2C38),
-                    Color(0xFF2B2636),
-                ),
-                backgroundColor = Color(0xFF0E0E14),
-            )
+            initialPalette
         )
     }
     var stableImageUrl by remember { mutableStateOf("") }
@@ -94,22 +116,21 @@ fun FlowingLightCanvasBackground(
     var toPaletteState by remember { mutableStateOf(paletteState) }
     val paletteTransition = remember { Animatable(1f) }
 
-    val rotation1 = remember { Animatable(0f) }
-    val rotation2 = remember { Animatable(0f) }
-    val motion1 = remember { Animatable(0f) }
-    val motion2 = remember { Animatable(0f) }
+    var animationClockSeconds by remember { mutableFloatStateOf(0f) }
 
     val layers = remember {
         listOf(
-            FlowLayer(0.18f, 0.16f, 0, 0.70f, 0.50f, 0.12f, 0.10f, 0.2f, 0.9f),
-            FlowLayer(0.84f, 0.20f, 1, 0.66f, 0.48f, 0.10f, 0.12f, 1.1f, 1.1f),
-            FlowLayer(0.20f, 0.84f, 2, 0.72f, 0.46f, 0.11f, 0.09f, 2.3f, 0.8f),
-            FlowLayer(0.84f, 0.82f, 3, 0.68f, 0.44f, 0.09f, 0.10f, 3.1f, 1.0f),
-            FlowLayer(0.50f, 0.52f, 4, 0.82f, 0.52f, 0.06f, 0.06f, 4.2f, 0.7f),
+            FlowLayer(0.16f, 0.14f, 0, 0.74f, 0.52f, 0.16f, 0.14f, 0.2f, 1.28f),
+            FlowLayer(0.86f, 0.18f, 1, 0.70f, 0.50f, 0.14f, 0.16f, 1.1f, 1.42f),
+            FlowLayer(0.18f, 0.86f, 2, 0.76f, 0.48f, 0.15f, 0.13f, 2.3f, 1.16f),
+            FlowLayer(0.86f, 0.84f, 3, 0.72f, 0.46f, 0.13f, 0.15f, 3.1f, 1.34f),
+            FlowLayer(0.50f, 0.52f, 4, 0.86f, 0.54f, 0.09f, 0.09f, 4.2f, 1.04f),
         )
     }
 
-    val renderedPalette = blendPalette(fromPaletteState, toPaletteState, paletteTransition.value)
+    val renderedPalette = remember(fromPaletteState, toPaletteState, paletteTransition.value) {
+        blendPalette(fromPaletteState, toPaletteState, paletteTransition.value)
+    }
 
     val unitBrushes = remember(renderedPalette.blobColors, layers) {
         layers.map { layer ->
@@ -135,9 +156,22 @@ fun FlowingLightCanvasBackground(
 
     LaunchedEffect(stableImageUrl) {
         if (stableImageUrl.isBlank()) {
-            hasValidPalette = FlowingLightPaletteCache.lastState != null
+            val current = blendPalette(fromPaletteState, toPaletteState, paletteTransition.value)
+            fromPaletteState = current
+            toPaletteState = fallbackPalette
+            paletteState = fallbackPalette
+            paletteTransition.snapTo(0f)
+            paletteTransition.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 420, easing = LinearEasing),
+            )
+            hasValidPalette = false
             onImageLoadResult?.invoke(false)
             return@LaunchedEffect
+        }
+
+        if (FlowingLightPaletteCache.lastState != null) {
+            onImageLoadResult?.invoke(true)
         }
 
         FlowingLightPaletteCache.byUrl[stableImageUrl]?.let { cached ->
@@ -151,10 +185,11 @@ fun FlowingLightCanvasBackground(
                 animationSpec = tween(durationMillis = 520, easing = LinearEasing),
             )
             hasValidPalette = true
+            onImageLoadResult?.invoke(true)
         }
 
         try {
-            val sourceBitmap = processor.loadAndProcessImage(stableImageUrl)
+            val sourceBitmap = processor.loadPaletteBitmap(stableImageUrl)
             if (sourceBitmap == null) {
                 onImageLoadResult?.invoke(false)
                 return@LaunchedEffect
@@ -182,49 +217,16 @@ fun FlowingLightCanvasBackground(
     val shouldAnimate = isPlaying && hasValidPalette
     LaunchedEffect(shouldAnimate) {
         if (shouldAnimate) {
-            coroutineScope {
-                launch {
-                    rotation1.animateTo(
-                        targetValue = rotation1.value + 360f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 98000, easing = LinearEasing),
-                            repeatMode = RepeatMode.Restart,
-                        ),
-                    )
-                }
-                launch {
-                    rotation2.animateTo(
-                        targetValue = rotation2.value - 360f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 116000, easing = LinearEasing),
-                            repeatMode = RepeatMode.Restart,
-                        ),
-                    )
-                }
-                launch {
-                    motion1.animateTo(
-                        targetValue = motion1.value + 1f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 72000, easing = LinearEasing),
-                            repeatMode = RepeatMode.Restart,
-                        ),
-                    )
-                }
-                launch {
-                    motion2.animateTo(
-                        targetValue = motion2.value + 1f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 84000, easing = LinearEasing),
-                            repeatMode = RepeatMode.Restart,
-                        ),
-                    )
+            var lastFrameNanos = 0L
+            while (isActive) {
+                withFrameNanos { frameTimeNanos ->
+                    if (lastFrameNanos != 0L) {
+                        val deltaSeconds = (frameTimeNanos - lastFrameNanos) / 1_000_000_000f
+                        animationClockSeconds += deltaSeconds
+                    }
+                    lastFrameNanos = frameTimeNanos
                 }
             }
-        } else {
-            rotation1.stop()
-            rotation2.stop()
-            motion1.stop()
-            motion2.stop()
         }
     }
 
@@ -252,16 +254,22 @@ fun FlowingLightCanvasBackground(
             val cx = size.width * 0.5f
             val cy = size.height * 0.5f
             val canvas = drawContext.canvas
-            val t1 = motion1.value * (2f * PI.toFloat())
-            val t2 = motion2.value * (2f * PI.toFloat())
+            val rotation1Value = (animationClockSeconds * (360f / 74f)) % 360f
+            val rotation2Value = (-animationClockSeconds * (360f / 92f)) % 360f
+            val t1 = (animationClockSeconds / 42f) * (2f * PI.toFloat())
+            val t2 = (animationClockSeconds / 54f) * (2f * PI.toFloat())
 
             for (index in layers.indices) {
                 val layer = layers[index]
-                val rotation = if (index % 2 == 0) rotation1.value else rotation2.value
+                val rotation = if (index % 2 == 0) rotation1Value else rotation2Value
                 val orbitX = size.width * layer.orbitXFactor
                 val orbitY = size.height * layer.orbitYFactor
-                val centerX = baseCenters[index].x + sin(t1 * layer.speed + layer.phase) * orbitX
-                val centerY = baseCenters[index].y + cos(t2 * layer.speed + layer.phase * 1.37f) * orbitY
+                val primaryX = sin(t1 * layer.speed + layer.phase) * orbitX
+                val primaryY = cos(t2 * layer.speed + layer.phase * 1.37f) * orbitY
+                val secondaryX = sin(t2 * layer.speed * 1.7f + layer.phase * 2.1f) * orbitX * 0.34f
+                val secondaryY = cos(t1 * layer.speed * 1.5f + layer.phase * 1.9f) * orbitY * 0.34f
+                val centerX = baseCenters[index].x + primaryX + secondaryX
+                val centerY = baseCenters[index].y + primaryY + secondaryY
                 val radius = blobRadii[index]
 
                 canvas.save()
@@ -304,44 +312,13 @@ private suspend fun extractPaletteState(bitmap: Bitmap): PaletteState = withCont
     val seedHsv = FloatArray(3)
     colorToHSV(seedColorInt, seedHsv)
     val isLowSaturation = seedHsv[1] < 0.2f
-
-    val rawColors = mutableListOf<Color>()
-
-    val vibrant = palette.vibrantSwatch?.rgb?.let(::Color)
-    val lightVibrant = palette.lightVibrantSwatch?.rgb?.let(::Color)
-    val darkVibrant = palette.darkVibrantSwatch?.rgb?.let(::Color)
-    val muted = palette.mutedSwatch?.rgb?.let(::Color)
-    val darkMuted = palette.darkMutedSwatch?.rgb?.let(::Color)
-
-    if (vibrant != null) rawColors.add(vibrant)
-    if (lightVibrant != null) rawColors.add(lightVibrant)
-    if (darkVibrant != null) rawColors.add(darkVibrant)
-    if (muted != null) rawColors.add(muted)
-    if (darkMuted != null && isLowSaturation) rawColors.add(darkMuted)
-
-    while (rawColors.size < 5) {
-        if (isLowSaturation) {
-            val randomVal = 0.28f + (rawColors.size * 0.12f)
-            rawColors.add(shiftValue(seedColor, randomVal))
-        } else {
-            val shiftAmount = (rawColors.size + 1) * 24f
-            rawColors.add(shiftHue(seedColor, shiftAmount))
-        }
-    }
-
-    val blobColors = rawColors.take(5).map { color ->
-        applyVibeBoost(color, isLowSaturation)
-    }
+    val blobColors = buildHarmonicBlobColors(seedHsv, isLowSaturation)
 
     val darkBase = palette.darkMutedSwatch?.rgb?.let(::Color)
         ?: palette.dominantSwatch?.rgb?.let(::Color)
         ?: Color.Black
 
-    val backgroundColor = if (isLowSaturation) {
-        Color(0xFF121212)
-    } else {
-        applyDarkBackgroundFilter(darkBase)
-    }
+    val backgroundColor = if (isLowSaturation) Color(0xFF121212) else applyDarkBackgroundFilter(darkBase)
 
     PaletteState(
         blobColors = blobColors,
@@ -349,44 +326,29 @@ private suspend fun extractPaletteState(bitmap: Bitmap): PaletteState = withCont
     )
 }
 
-private fun applyVibeBoost(color: Color, isLowSaturation: Boolean): Color {
-    val hsv = FloatArray(3)
-    colorToHSV(color.toArgb(), hsv)
-
+private fun buildHarmonicBlobColors(seedHsv: FloatArray, isLowSaturation: Boolean): List<Color> {
     if (isLowSaturation) {
-        hsv[1] = 0.0f
-
-        if (hsv[2] > 0.4f) {
-            hsv[2] = 0.62f + (Math.random().toFloat() * 0.14f)
-        } else {
-            hsv[2] = 0.18f + (Math.random().toFloat() * 0.08f)
+        val values = floatArrayOf(0.22f, 0.32f, 0.42f, 0.52f, 0.62f)
+        return values.map { value ->
+            Color(HSVToColor(floatArrayOf(seedHsv[0], 0f, value)))
         }
-    } else {
-        hsv[1] = (hsv[1].coerceAtLeast(0.25f) * 1.12f).coerceIn(0.28f, 0.72f)
-        hsv[2] = (hsv[2].coerceAtLeast(0.36f) * 1.08f).coerceIn(0.48f, 0.84f)
     }
 
-    return Color(HSVToColor(hsv))
-}
+    val baseHue = seedHsv[0]
+    val baseSaturation = seedHsv[1].coerceIn(0.24f, 0.58f)
+    val baseValue = seedHsv[2].coerceIn(0.38f, 0.68f)
+    val hueOffsets = floatArrayOf(-16f, -7f, 0f, 8f, 17f)
+    val satFactors = floatArrayOf(0.92f, 0.98f, 1.0f, 0.95f, 0.9f)
+    val valFactors = floatArrayOf(0.84f, 0.92f, 1.0f, 0.9f, 0.82f)
 
-/**
- * 辅助函数：改变亮度 (Value)
- */
-private fun shiftValue(color: Color, targetValue: Float): Color {
-    val hsv = FloatArray(3)
-    colorToHSV(color.toArgb(), hsv)
-    hsv[2] = targetValue.coerceIn(0.1f, 1.0f)
-    return Color(HSVToColor(hsv))
-}
-
-/**
- * 旋转色相：基于基准色，偏移 degrees 度
- */
-private fun shiftHue(color: Color, degrees: Float): Color {
-    val hsv = FloatArray(3)
-    colorToHSV(color.toArgb(), hsv)
-    hsv[0] = (hsv[0] + degrees) % 360f
-    return Color(HSVToColor(hsv))
+    return List(5) { index ->
+        val hsv = floatArrayOf(
+            (baseHue + hueOffsets[index] + 360f) % 360f,
+            (baseSaturation * satFactors[index]).coerceIn(0.22f, 0.62f),
+            (baseValue * valFactors[index]).coerceIn(0.34f, 0.74f)
+        )
+        Color(HSVToColor(hsv))
+    }
 }
 
 /**

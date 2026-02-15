@@ -19,6 +19,8 @@ import kotlinx.coroutines.withContext
 
 class FlowingLightProcessor(private val context: Context) {
 
+    private val imageLoader by lazy { ImageLoader(context) }
+
     // Apple Music中的Mesh参数之一
     private val meshFloats = floatArrayOf(
         -0.2351f, -0.0967f, 0.2135f, -0.1414f, 0.9221f, -0.0908f, 0.9221f, -0.0685f, 1.3027f, 0.0253f, 1.2351f, 0.1786f,
@@ -40,8 +42,24 @@ class FlowingLightProcessor(private val context: Context) {
                 .build()
 
             Logger.debug("FlowingLightProcessor", "Loading image from http URL: $imageUrl")
-            return@withContext (ImageLoader(context).execute(request).image as? BitmapImage)
+            return@withContext (imageLoader.execute(request).image as? BitmapImage)
                 ?.bitmap?.let { processBitmap(it) }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    suspend fun loadPaletteBitmap(imageUrl: String?): Bitmap? = withContext(Dispatchers.IO) {
+        try {
+            val request = ImageRequest.Builder(context)
+                .data(imageUrl ?: Uri.EMPTY)
+                .allowHardware(false)
+                .size(96)
+                .crossfade(false)
+                .build()
+
+            return@withContext (imageLoader.execute(request).image as? BitmapImage)?.bitmap
         } catch (e: Exception) {
             e.printStackTrace()
             null
