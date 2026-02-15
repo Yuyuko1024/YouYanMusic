@@ -323,22 +323,14 @@ fun BottomSheetPlayer(
             )
         },
         backgroundContent = {
-            if (enableFlowingBackground) {
-                FlowingLightCanvasBackground(
-                    isPlaying = isPlaying,
-                    imageUrl = currentArtworkUrl,
-                    modifier = Modifier.fillMaxSize(),
-                    onImageLoadResult = { result ->
-                        coverLoaded = result
-                    },
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.2f))
-                )
-            }
+            FlowingLightCanvasBackground(
+                isPlaying = isPlaying && enableFlowingBackground,
+                imageUrl = currentArtworkUrl,
+                modifier = Modifier.fillMaxSize(),
+                onImageLoadResult = { result ->
+                    coverLoaded = result
+                },
+            )
         }
     ) {
         CompositionLocalProvider(

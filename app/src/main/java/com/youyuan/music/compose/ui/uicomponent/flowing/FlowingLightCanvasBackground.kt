@@ -110,7 +110,7 @@ fun FlowingLightCanvasBackground(
             initialPalette
         )
     }
-    var stableImageUrl by remember { mutableStateOf("") }
+    var stableImageUrl by remember { mutableStateOf(imageUrl ?: "") }
     var hasValidPalette by remember { mutableStateOf(cachedInitial != null) }
     var fromPaletteState by remember { mutableStateOf(paletteState) }
     var toPaletteState by remember { mutableStateOf(paletteState) }
@@ -149,13 +149,20 @@ fun FlowingLightCanvasBackground(
 
     LaunchedEffect(imageUrl) {
         if (imageUrl != stableImageUrl) {
-            delay(200)
-            stableImageUrl = imageUrl ?: ""
+            if (stableImageUrl.isBlank() && !imageUrl.isNullOrBlank()) {
+                stableImageUrl = imageUrl
+            } else {
+                delay(200)
+                stableImageUrl = imageUrl ?: ""
+            }
         }
     }
 
     LaunchedEffect(stableImageUrl) {
         if (stableImageUrl.isBlank()) {
+            if (!imageUrl.isNullOrBlank()) {
+                return@LaunchedEffect
+            }
             val current = blendPalette(fromPaletteState, toPaletteState, paletteTransition.value)
             fromPaletteState = current
             toPaletteState = fallbackPalette
