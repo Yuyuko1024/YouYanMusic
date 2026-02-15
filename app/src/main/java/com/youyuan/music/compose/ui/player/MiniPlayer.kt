@@ -143,6 +143,7 @@ fun MiniPlayer(
         Row(
             modifier = Modifier
                 .weight(1f)
+                .padding(horizontal = 2.dp)
                 .offset { IntOffset(animatedOffsetX.roundToInt(), 0) }
                 .pointerInput(maxSwipeOffsetPx, triggerOffsetPx) {
                     detectHorizontalDragGestures(
@@ -177,8 +178,7 @@ fun MiniPlayer(
         ) {
             Box(
                 modifier = Modifier
-                    .size(58.dp)
-                    .padding(4.dp)
+                    .size(50.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .align(Alignment.CenterVertically),
             ) {
