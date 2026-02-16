@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import android.widget.Toast
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemOuterTitle
@@ -27,6 +29,8 @@ import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.dialog.InputDialog
 import com.moriafly.salt.ui.popup.PopupMenuItem
 import com.moriafly.salt.ui.popup.rememberPopupState
+import com.moriafly.salt.ui.rememberScrollState
+import com.moriafly.salt.ui.verticalScroll
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
@@ -86,7 +90,8 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Column(Modifier.fillMaxSize()) {
+            val scrollState = rememberScrollState()
+            Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
                 val popupState = rememberPopupState()
                 val isAndroid12OrAbove = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                 ItemOuterTitle(text = stringResource(R.string.settings_ui_title))
