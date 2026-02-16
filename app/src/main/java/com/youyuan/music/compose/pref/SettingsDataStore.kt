@@ -28,6 +28,8 @@ class SettingsDataStore(context: Context) {
         val APP_DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("app_dynamic_color_enabled")
         val PLAYER_SQUIGGLY_WAVE_ENABLED = booleanPreferencesKey("player_squiggly_wave_enabled")
         val PLAYER_COVER_TYPE = intPreferencesKey("player_cover_type")
+        val NEW_YEAR_THEME_ENABLED = booleanPreferencesKey("new_year_theme_enabled")
+        val NEW_YEAR_FIREWORKS_ENABLED = booleanPreferencesKey("new_year_fireworks_enabled")
 
         // 播放器行为
         val PLAYER_SEEK_TO_PREVIOUS_ACTION = intPreferencesKey("player_seek_to_previous_action")
@@ -70,6 +72,16 @@ class SettingsDataStore(context: Context) {
         .map { preferences ->
             // 默认值为 0，即方形封面
             preferences[PLAYER_COVER_TYPE] ?: 0
+        }
+
+    val newYearThemeEnabled: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[NEW_YEAR_THEME_ENABLED] ?: true
+        }
+
+    val newYearFireworksEnabled: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[NEW_YEAR_FIREWORKS_ENABLED] ?: true
         }
 
     // 播放器行为的设置
@@ -117,6 +129,18 @@ class SettingsDataStore(context: Context) {
     suspend fun setPlayerCoverType(type: PlayerCoverType) {
         dataStore.edit { settings ->
             settings[PLAYER_COVER_TYPE] = type.ordinal
+        }
+    }
+
+    suspend fun setNewYearThemeEnabled(isEnabled: Boolean) {
+        dataStore.edit { settings ->
+            settings[NEW_YEAR_THEME_ENABLED] = isEnabled
+        }
+    }
+
+    suspend fun setNewYearFireworksEnabled(isEnabled: Boolean) {
+        dataStore.edit { settings ->
+            settings[NEW_YEAR_FIREWORKS_ENABLED] = isEnabled
         }
     }
 

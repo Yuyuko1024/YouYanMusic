@@ -55,6 +55,9 @@
     <string name="settings_action_default">Default</string>
     <string name="settings_action_previous">Previous Track</string>
     <string name="settings_action_restart">Restart</string>
+    <string name="settings_new_year_title">Lunar New Year Special</string>
+    <string name="settings_new_year_theme">Enable New Year Color Theme</string>
+    <string name="settings_new_year_fireworks">Enable Fireworks Effect</string>
 
     <!-- Network / API -->
     <string name="settings_network_title">Network</string>

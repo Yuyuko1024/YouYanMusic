@@ -34,6 +34,7 @@ import com.youyuan.music.compose.pref.SettingsDataStore
 import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
 import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
+import com.youyuan.music.compose.utils.LunarNewYearUtils
 import kotlinx.coroutines.launch
 
 @UnstableSaltUiApi
@@ -49,8 +50,11 @@ fun SettingsScreen(
     val settingsDataStore = remember { SettingsDataStore(context) }
     val isAppDynamicColorEnabled by settingsDataStore.appDynamicColorEnabled.collectAsState(initial = false)
     val isPlayerSquigglyWaveEnabled by settingsDataStore.isPlayerSquigglyWaveEnabled.collectAsState(initial = true)
+    val isNewYearThemeEnabled by settingsDataStore.newYearThemeEnabled.collectAsState(initial = true)
+    val isNewYearFireworksEnabled by settingsDataStore.newYearFireworksEnabled.collectAsState(initial = true)
     val playerCoverType by settingsDataStore.playerCoverType
         .collectAsState(initial = PlayerCoverType.DEFAULT.ordinal)
+    val isNewYearFestivalDay = remember { LunarNewYearUtils.isNewYearFestivalDay() }
 
     val effectiveApiUrl by appConfigViewModel.effectiveApiUrl.collectAsState()
     var showApiDialog by remember { mutableStateOf(false) }
@@ -127,6 +131,31 @@ fun SettingsScreen(
                         }
                     }
                 }
+
+                if (isNewYearFestivalDay) {
+                    ItemOuterTitle(text = stringResource(R.string.settings_new_year_title))
+                    RoundedColumn {
+                        ItemSwitcher(
+                            text = stringResource(R.string.settings_new_year_theme),
+                            state = isNewYearThemeEnabled,
+                            onChange = { state ->
+                                coroutineScope.launch {
+                                    settingsDataStore.setNewYearThemeEnabled(state)
+                                }
+                            }
+                        )
+                        ItemSwitcher(
+                            text = stringResource(R.string.settings_new_year_fireworks),
+                            state = isNewYearFireworksEnabled,
+                            onChange = { state ->
+                                coroutineScope.launch {
+                                    settingsDataStore.setNewYearFireworksEnabled(state)
+                                }
+                            }
+                        )
+                    }
+                }
+
                 ItemOuterTitle(text = stringResource(R.string.settings_player_behavior))
                 RoundedColumn {
                     val popupState = rememberPopupState()

@@ -20,6 +20,7 @@ import com.youyuan.music.compose.pref.SettingsDataStore
 import com.youyuan.music.compose.service.MusicPlaybackService
 import com.youyuan.music.compose.ui.theme.YouYanMusicTheme
 import com.youyuan.music.compose.ui.view.RootView
+import com.youyuan.music.compose.utils.LunarNewYearUtils
 import dagger.hilt.android.AndroidEntryPoint
 
 @UnstableApi
@@ -57,16 +58,29 @@ class MainActivity : ComponentActivity() {
         setContent {
             // 设置项目读取
             val settingsDataStore = remember { SettingsDataStore(context) }
+            val isNewYearFestival = remember { LunarNewYearUtils.isNewYearFestivalDay() }
             // 是否启用动态颜色
             val useDynamicColor = settingsDataStore.appDynamicColorEnabled.collectAsState(
                 initial = false
             ).value
+            // 新年主题效果
+            val isNewYearThemeEnabled = settingsDataStore.newYearThemeEnabled.collectAsState(
+                initial = true
+            ).value
+            val isNewYearFireworksEnabled = settingsDataStore.newYearFireworksEnabled.collectAsState(
+                initial = true
+            ).value
+
+            val useNewYearTheme = isNewYearFestival && isNewYearThemeEnabled
+            val showNewYearFireworks = isNewYearFestival && isNewYearFireworksEnabled
 
             YouYanMusicTheme(
-                dynamicColor = useDynamicColor
+                dynamicColor = useDynamicColor,
+                useNewYearTheme = useNewYearTheme
             ) {
                 RootView(
-                    context = this@MainActivity
+                    context = this@MainActivity,
+                    showNewYearFireworks = showNewYearFireworks
                 )
             }
         }

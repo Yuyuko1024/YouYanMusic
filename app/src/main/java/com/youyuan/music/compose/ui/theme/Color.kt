@@ -14,6 +14,22 @@ val PrimaryVariant = Color(0xFFD83B42) // reimu-700
 val PrimarySoft = Color(0xFFFFD5D1) // reimu-300
 val PrimarySoftSecond = Color(0xFFFFF0EF) // reimu-100
 
+// 新年主题色系（除夕/正月初一）
+val NewYearPrimaryRed = Color(0xFFD01C2F)
+val NewYearDeepRed = Color(0xFFA50F1D)
+val NewYearAccentGold = Color(0xFFF5C242)
+val NewYearLightGold = Color(0xFFFFE7A8)
+val NewYearBackground = Color(0xFFFFF8F3)
+val NewYearSurface = Color(0xFFFFEFE4)
+val NewYearTextPrimary = Color(0xFF3A1A1A)
+val NewYearTextSecondary = Color(0xFF704646)
+val NewYearOnPrimary = Color(0xFFFFFFFF)
+
+val NewYearDarkBackground = Color(0xFF1A1212)
+val NewYearDarkSurface = Color(0xFF2A1A1A)
+val NewYearDarkTextPrimary = Color(0xFFFFEFE4)
+val NewYearDarkTextSecondary = Color(0xFFE9C7A2)
+
 // 次要色 (Marisa 色系) - 温暖的金黄色
 val Secondary = Color(0xFFB6832E) // marisa-600
 val SecondaryDark = Color(0xFF885907) // marisa-800

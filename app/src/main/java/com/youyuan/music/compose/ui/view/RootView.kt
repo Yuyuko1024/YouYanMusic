@@ -67,6 +67,7 @@ import com.youyuan.music.compose.ui.player.COLLAPSED_ANCHOR
 import com.youyuan.music.compose.ui.player.rememberBottomSheetState
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.screens.navigationBuilder
+import com.youyuan.music.compose.ui.uicomponent.NewYearFireworksOverlay
 import com.youyuan.music.compose.ui.utils.LocalPlayerAwareWindowInsets
 import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
@@ -84,6 +85,7 @@ import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 @ExperimentalFoundationApi
 fun RootView(
     context: Activity,
+    showNewYearFireworks: Boolean = false,
     modifier: Modifier = Modifier
 ) {
 
@@ -317,6 +319,12 @@ fun RootView(
                     .navigationBarsPadding()
             )
 
+        }
+
+        if (showNewYearFireworks) {
+            NewYearFireworksOverlay(
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }

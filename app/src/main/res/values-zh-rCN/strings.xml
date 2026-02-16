@@ -55,6 +55,9 @@
     <string name="settings_action_default">默认行为</string>
     <string name="settings_action_previous">上一首</string>
     <string name="settings_action_restart">回到开始</string>
+    <string name="settings_new_year_title">新年特辑</string>
+    <string name="settings_new_year_theme">启用新年颜色主题</string>
+    <string name="settings_new_year_fireworks">启用烟花特效</string>
 
     <!-- Network / API -->
     <string name="settings_network_title">网络</string>

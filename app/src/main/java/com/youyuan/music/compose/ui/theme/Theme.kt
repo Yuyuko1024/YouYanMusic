@@ -39,15 +39,46 @@ fun darkColors(): SaltColors = SaltColors(
 )
 
 @Composable
+fun newYearLightColors(): SaltColors = SaltColors(
+    highlight = NewYearPrimaryRed,
+    text = NewYearTextPrimary,
+    subText = NewYearTextSecondary,
+    background = NewYearBackground,
+    subBackground = NewYearSurface,
+    popup = White,
+    stroke = NewYearAccentGold,
+    onHighlight = NewYearOnPrimary
+)
+
+@Composable
+fun newYearDarkColors(): SaltColors = SaltColors(
+    highlight = NewYearAccentGold,
+    text = NewYearDarkTextPrimary,
+    subText = NewYearDarkTextSecondary,
+    background = NewYearDarkBackground,
+    subBackground = NewYearDarkSurface,
+    popup = NewYearDarkSurface,
+    stroke = NewYearLightGold,
+    onHighlight = NewYearDeepRed
+)
+
+@Composable
 fun YouYanMusicTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
+    useNewYearTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
 
     val dynamicColors = when {
+        useNewYearTheme -> {
+            SaltDynamicColors(
+                light = newYearLightColors(),
+                dark = newYearDarkColors()
+            )
+        }
         // 优先检查是否启用动态颜色且支持Android 12+
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             SaltDynamicColors(
