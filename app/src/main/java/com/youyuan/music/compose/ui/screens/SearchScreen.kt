@@ -40,6 +40,7 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.uicomponent.SearchTopAppBar
 import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
@@ -125,7 +126,7 @@ fun SearchScreen(
                 exit = fadeOut()
             ) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize().overScrollVertical()
                 ) {
                     items(
                         items = searchResults,
@@ -174,7 +175,7 @@ fun SearchScreen(
                                 }
                         ) {
                             LazyColumn(
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize().overScrollVertical()
                             ) {
                                 item {
                                     Text(

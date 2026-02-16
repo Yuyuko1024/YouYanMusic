@@ -36,6 +36,7 @@ import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
 import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import com.youyuan.music.compose.utils.LunarNewYearUtils
@@ -91,7 +92,10 @@ fun SettingsScreen(
                 .padding(padding)
         ) {
             val scrollState = rememberScrollState()
-            Column(Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            Column(
+                Modifier.fillMaxSize().overScrollVertical()
+                .verticalScroll(scrollState)
+            ) {
                 val popupState = rememberPopupState()
                 val isAndroid12OrAbove = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                 ItemOuterTitle(text = stringResource(R.string.settings_ui_title))

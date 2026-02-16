@@ -48,6 +48,7 @@ import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
 import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
@@ -167,7 +168,7 @@ fun AlbumScreen(
                     )
 
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().overScrollVertical(),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         item {

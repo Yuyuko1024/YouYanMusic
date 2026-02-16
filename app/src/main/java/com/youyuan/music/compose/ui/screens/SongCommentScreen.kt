@@ -41,6 +41,7 @@ import com.moriafly.salt.ui.ItemOuterTextButton
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
 import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.api.model.CommentItem
@@ -92,7 +93,7 @@ fun SongCommentScreen(
                 .pullRefresh(pullRefreshState)
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().overScrollVertical(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
             item {

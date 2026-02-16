@@ -51,6 +51,7 @@ import com.moriafly.salt.ui.SaltTheme
 import androidx.compose.ui.res.stringResource
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.UserPlaylistItem
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.view.MainTabScaffold
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -126,7 +127,8 @@ fun ProfileScreen(
             ) {
                 LazyColumn(
                     modifier = Modifier
-                        .fillMaxSize(),
+                        .fillMaxSize()
+                        .overScrollVertical(),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     item {

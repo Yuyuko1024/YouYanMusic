@@ -51,6 +51,7 @@ import com.youyuan.music.compose.ui.viewmodel.PlaylistDetailViewModel
 import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
 import com.youyuan.music.compose.ui.uicomponent.TiltedPhotoWall
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
@@ -154,7 +155,7 @@ fun PlaylistDetailScreen(
                     }
 
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().overScrollVertical(),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         item {

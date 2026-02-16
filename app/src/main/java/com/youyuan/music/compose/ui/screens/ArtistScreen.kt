@@ -66,6 +66,7 @@ import com.youyuan.music.compose.ui.uicomponent.AlbumItem
 import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
 import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
@@ -299,7 +300,7 @@ fun ArtistScreen(
                             0 -> {
                                 LazyColumn(
                                     state = songsListState,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().overScrollVertical(),
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     if (topSongs.isEmpty()) {
@@ -344,7 +345,7 @@ fun ArtistScreen(
                             else -> {
                                 LazyColumn(
                                     state = albumsListState,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().overScrollVertical(),
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     if (albums.isEmpty()) {

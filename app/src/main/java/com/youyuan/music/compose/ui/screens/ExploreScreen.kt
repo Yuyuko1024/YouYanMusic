@@ -56,6 +56,8 @@ import com.youyuan.music.compose.api.model.PersonalizedPlaylistItem
 import com.youyuan.music.compose.api.model.RecommendResourceItem
 import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.api.model.ToplistItem
+import com.youyuan.music.compose.ui.uicomponent.overScrollHorizontal
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.view.MainTabScaffold
 import com.youyuan.music.compose.ui.viewmodel.ExploreViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
@@ -146,6 +148,7 @@ fun ExploreScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
+                    .overScrollVertical()
                     .padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
@@ -340,7 +343,7 @@ private fun DailyRecommendPlaylistSection(
         playlists.isEmpty() -> Text(text = "暂无每日推荐歌单", style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
         else -> {
             LazyRow(
-                modifier = modifier.fillMaxWidth(),
+                modifier = modifier.fillMaxWidth().overScrollHorizontal(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(playlists, key = { it.id }) { pl ->
@@ -524,7 +527,7 @@ private fun PersonalizedPlaylistSection(
 
         else -> {
             LazyRow(
-                modifier = modifier.fillMaxWidth(),
+                modifier = modifier.fillMaxWidth().overScrollHorizontal(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(playlists, key = { it.id ?: it.hashCode().toLong() }) { pl ->
