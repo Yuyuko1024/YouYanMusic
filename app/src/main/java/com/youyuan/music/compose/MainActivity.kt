@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,6 +13,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.media3.common.util.UnstableApi
@@ -70,6 +72,14 @@ class MainActivity : ComponentActivity() {
             val isNewYearFireworksEnabled = settingsDataStore.newYearFireworksEnabled.collectAsState(
                 initial = true
             ).value
+
+            if (isNewYearFestival) {
+                Toast.makeText(
+                    context,
+                    stringResource(R.string.new_year_toast),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
 
             val useNewYearTheme = isNewYearFestival && isNewYearThemeEnabled
             val showNewYearFireworks = isNewYearFestival && isNewYearFireworksEnabled

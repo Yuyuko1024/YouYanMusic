@@ -2,6 +2,8 @@
     <string name="app_name">YouYanMusic</string>
     <string name="back_btn">Back</string>
 
+    <string name="new_year_toast">Happy New Year 🎆🧨🎇</string>
+
     <!-- page title -->
     <string name="title_explore">Explore</string>
     <string name="title_profile">Profile</string>
