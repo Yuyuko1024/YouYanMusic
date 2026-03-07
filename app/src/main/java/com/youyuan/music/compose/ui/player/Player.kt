@@ -313,7 +313,7 @@ fun BottomSheetPlayer(
         modifier = modifier,
         collapsedContent = {
             MiniPlayer(
-                modifier = modifier.fillMaxSize(),
+                modifier = modifier.fillMaxWidth(),
                 context = context,
                 playerViewModel = playerViewModel,
                 onPlaylistClick = {

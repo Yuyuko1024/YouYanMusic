@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.dp
 
 
 val NavigationBarHeight = 60.dp
-val MiniPlayerHeight = 78.dp
+val MiniPlayerHeight = 68.dp
 val AppBarHeight = 54.dp
 
 val PlayerHorizontalPadding = 26.dp
