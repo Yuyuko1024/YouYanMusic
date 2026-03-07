@@ -7,15 +7,18 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -70,8 +73,10 @@ import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.utils.PlayerForegroundColorLight
+import com.youyuan.music.compose.ui.utils.AdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.getPlayerUIColor
 import com.youyuan.music.compose.ui.utils.getRememberedPlayerUIColor
+import com.youyuan.music.compose.ui.utils.rememberAdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.rememberPlayerUIColor
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
@@ -194,12 +199,11 @@ fun BottomSheetPlayer(
     }
 
     if (showSongActionDialog) {
-        val songId = currentSongId
-        if (songId != null) {
+        if (currentSongId != null) {
             SongActionSheetDialog(
                 playerViewModel = playerViewModel,
                 song = SongActionInfo(
-                    songId = songId,
+                    songId = currentSongId,
                     albumId = currentSong.al?.id,
                     title = currentSong.name,
                     artist = artistName,
@@ -309,7 +313,7 @@ fun BottomSheetPlayer(
         modifier = modifier,
         collapsedContent = {
             MiniPlayer(
-                modifier = modifier,
+                modifier = modifier.fillMaxSize(),
                 context = context,
                 playerViewModel = playerViewModel,
                 onPlaylistClick = {
@@ -444,99 +448,175 @@ private fun ExpandedPlayerMainPage(
     onShowAudioQualityDialog: () -> Unit,
     onShowSongActionDialog: () -> Unit,
 ) {
-    Column {
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .systemBarsPadding(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = { state.collapseSoft() },
-                modifier = modifier.padding(4.dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_arrow_collapse),
-                    contentDescription = "收起抽屉",
-                    tint = LocalPlayerUIColor.current
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Row {
-                IconButton(
-                    onClick = {
-                        SystemMediaDialogUtils.getInstance(context).showSystemMediaDialog()
-                    },
-                    modifier = modifier.padding(4.dp)
-                ) {
-                    Icon(
-                        painter = rememberVectorPainter(TablerIcons.Cast),
-                        contentDescription = "投送",
-                        tint = LocalPlayerUIColor.current
-                    )
-                }
-                IconButton(
-                    onClick = {},
-                    modifier = modifier.padding(4.dp)
-                ) {
-                    Icon(
-                        painter = rememberVectorPainter(TablerIcons.Share),
-                        contentDescription = "分享",
-                        tint = LocalPlayerUIColor.current
-                    )
-                }
-            }
-        }
-
-        HorizontalPager(
-            state = horizontalPagerState,
-            modifier = Modifier
-                .fillMaxSize()
-                .weight(1f)
-                .sizeIn(maxHeight = 600.dp, maxWidth = 600.dp)
-                .align(Alignment.CenterHorizontally),
-            beyondViewportPageCount = 1
-        ) { page ->
-            when (page) {
-                0 -> Box(Modifier.fillMaxSize())
-                1 -> CoverPager(
-                    artworkUrl = currentArtworkUrl,
-                    isPlaying = isPlaying,
-                    coverType = playerCoverType
-                )
-                2 -> LyricsPager(playerViewModel = playerViewModel)
-            }
-        }
-
-        PlayerControlsSection(
-            horizontalPagerState = horizontalPagerState,
-            verticalPagerState = verticalPagerState,
-            coroutineScope = coroutineScope,
-            navController = navController,
-            playerViewModel = playerViewModel,
-            title = title,
-            artistName = artistName,
-            isFavorite = isFavorite,
-            currentSongId = currentSongId,
-            commentCount = commentCount,
-            sliderPosition = sliderPosition,
-            currentPosition = currentPosition,
-            duration = duration,
-            isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
-            isPlaying = isPlaying,
-            repeatMode = repeatMode,
-            shuffleModeEnabled = shuffleModeEnabled,
-            onSliderPositionChange = onSliderPositionChange,
-            onSeekTo = onSeekTo,
-            onToggleFavorite = onToggleFavorite,
-            onToggleLoopMode = onToggleLoopMode,
-            onSkipToPrevious = onSkipToPrevious,
-            onTogglePlayPause = onTogglePlayPause,
-            onSkipToNext = onSkipToNext,
-            onShowEqualizerDialog = onShowEqualizerDialog,
-            onShowAudioQualityDialog = onShowAudioQualityDialog,
-            onShowSongActionDialog = onShowSongActionDialog,
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val adaptiveLayoutMode = rememberAdaptiveLayoutMode(maxWidth = maxWidth)
+        val isTabletLandscape = adaptiveLayoutMode == AdaptiveLayoutMode.TabletLandscape
+        val horizontalGap by animateDpAsState(
+            targetValue = if (isTabletLandscape) 20.dp else 0.dp,
+            animationSpec = tween(280),
+            label = "playerLandscapeGap"
         )
+
+        Column {
+            Row(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .systemBarsPadding(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { state.collapseSoft() },
+                    modifier = modifier.padding(4.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_arrow_collapse),
+                        contentDescription = "收起抽屉",
+                        tint = LocalPlayerUIColor.current
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                Row {
+                    IconButton(
+                        onClick = {
+                            SystemMediaDialogUtils.getInstance(context).showSystemMediaDialog()
+                        },
+                        modifier = modifier.padding(4.dp)
+                    ) {
+                        Icon(
+                            painter = rememberVectorPainter(TablerIcons.Cast),
+                            contentDescription = "投送",
+                            tint = LocalPlayerUIColor.current
+                        )
+                    }
+                    IconButton(
+                        onClick = {},
+                        modifier = modifier.padding(4.dp)
+                    ) {
+                        Icon(
+                            painter = rememberVectorPainter(TablerIcons.Share),
+                            contentDescription = "分享",
+                            tint = LocalPlayerUIColor.current
+                        )
+                    }
+                }
+            }
+
+            if (isTabletLandscape) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = PlayerHorizontalPadding)
+                ) {
+                    HorizontalPager(
+                        state = horizontalPagerState,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .sizeIn(maxHeight = 640.dp, maxWidth = 640.dp),
+                        beyondViewportPageCount = 1
+                    ) { page ->
+                        when (page) {
+                            0 -> Box(Modifier.fillMaxSize())
+                            1 -> CoverPager(
+                                artworkUrl = currentArtworkUrl,
+                                isPlaying = isPlaying,
+                                coverType = playerCoverType
+                            )
+                            2 -> LyricsPager(playerViewModel = playerViewModel)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.size(horizontalGap))
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        PlayerControlsSection(
+                            horizontalPagerState = horizontalPagerState,
+                            verticalPagerState = verticalPagerState,
+                            coroutineScope = coroutineScope,
+                            navController = navController,
+                            playerViewModel = playerViewModel,
+                            title = title,
+                            artistName = artistName,
+                            isFavorite = isFavorite,
+                            currentSongId = currentSongId,
+                            commentCount = commentCount,
+                            sliderPosition = sliderPosition,
+                            currentPosition = currentPosition,
+                            duration = duration,
+                            isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
+                            isPlaying = isPlaying,
+                            repeatMode = repeatMode,
+                            shuffleModeEnabled = shuffleModeEnabled,
+                            onSliderPositionChange = onSliderPositionChange,
+                            onSeekTo = onSeekTo,
+                            onToggleFavorite = onToggleFavorite,
+                            onToggleLoopMode = onToggleLoopMode,
+                            onSkipToPrevious = onSkipToPrevious,
+                            onTogglePlayPause = onTogglePlayPause,
+                            onSkipToNext = onSkipToNext,
+                            onShowEqualizerDialog = onShowEqualizerDialog,
+                            onShowAudioQualityDialog = onShowAudioQualityDialog,
+                            onShowSongActionDialog = onShowSongActionDialog,
+                        )
+                    }
+                }
+            } else {
+                HorizontalPager(
+                    state = horizontalPagerState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                        .sizeIn(maxHeight = 600.dp, maxWidth = 600.dp)
+                        .align(Alignment.CenterHorizontally),
+                    beyondViewportPageCount = 1
+                ) { page ->
+                    when (page) {
+                        0 -> Box(Modifier.fillMaxSize())
+                        1 -> CoverPager(
+                            artworkUrl = currentArtworkUrl,
+                            isPlaying = isPlaying,
+                            coverType = playerCoverType
+                        )
+                        2 -> LyricsPager(playerViewModel = playerViewModel)
+                    }
+                }
+
+                PlayerControlsSection(
+                    horizontalPagerState = horizontalPagerState,
+                    verticalPagerState = verticalPagerState,
+                    coroutineScope = coroutineScope,
+                    navController = navController,
+                    playerViewModel = playerViewModel,
+                    title = title,
+                    artistName = artistName,
+                    isFavorite = isFavorite,
+                    currentSongId = currentSongId,
+                    commentCount = commentCount,
+                    sliderPosition = sliderPosition,
+                    currentPosition = currentPosition,
+                    duration = duration,
+                    isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
+                    isPlaying = isPlaying,
+                    repeatMode = repeatMode,
+                    shuffleModeEnabled = shuffleModeEnabled,
+                    onSliderPositionChange = onSliderPositionChange,
+                    onSeekTo = onSeekTo,
+                    onToggleFavorite = onToggleFavorite,
+                    onToggleLoopMode = onToggleLoopMode,
+                    onSkipToPrevious = onSkipToPrevious,
+                    onTogglePlayPause = onTogglePlayPause,
+                    onSkipToNext = onSkipToNext,
+                    onShowEqualizerDialog = onShowEqualizerDialog,
+                    onShowAudioQualityDialog = onShowAudioQualityDialog,
+                    onShowSongActionDialog = onShowSongActionDialog,
+                )
+            }
+        }
     }
 }
 

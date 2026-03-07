@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,6 +48,7 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.constants.PlayerHorizontalPadding
 import com.youyuan.music.compose.ui.uicomponent.AcrylicFlipAsyncImage
 import com.youyuan.music.compose.ui.theme.UiDimens
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
@@ -68,7 +70,7 @@ fun MiniPlayer(
     playerViewModel: PlayerViewModel,
     onPlaylistClick: () -> Unit = {},
 ) {
-    var dragOffsetX by remember { mutableStateOf(0f) }
+    var dragOffsetX by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
     val density = LocalDensity.current
     val maxSwipeOffsetPx = with(density) { UiDimens.miniPlayerSwipeMaxOffset.toPx() }
@@ -131,14 +133,9 @@ fun MiniPlayer(
 
     Row(
         modifier = modifier
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = PlayerHorizontalPadding, vertical = 4.dp)
     ) {
 
-        Spacer(
-            modifier = Modifier
-                .size(6.dp)
-                .align(Alignment.CenterVertically)
-        )
         // 封面图片容器和背景
         Row(
             modifier = Modifier

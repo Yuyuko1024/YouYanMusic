@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,10 +20,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberDrawerState
@@ -67,8 +67,12 @@ import com.youyuan.music.compose.ui.player.COLLAPSED_ANCHOR
 import com.youyuan.music.compose.ui.player.rememberBottomSheetState
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.screens.navigationBuilder
+import com.youyuan.music.compose.ui.uicomponent.AdaptiveDrawerContainer
 import com.youyuan.music.compose.ui.uicomponent.NewYearFireworksOverlay
+import com.youyuan.music.compose.ui.utils.AdaptiveLayoutMode
+import com.youyuan.music.compose.ui.utils.contentHorizontalPadding
 import com.youyuan.music.compose.ui.utils.LocalPlayerAwareWindowInsets
+import com.youyuan.music.compose.ui.utils.rememberAdaptiveLayoutMode
 import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
@@ -158,16 +162,18 @@ fun RootView(
         val density = LocalDensity.current
         val windowsInsets = WindowInsets.systemBars
         val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
+        val adaptiveLayoutMode = rememberAdaptiveLayoutMode(maxWidth = maxWidth)
+        val isTabletLandscape = adaptiveLayoutMode == AdaptiveLayoutMode.TabletLandscape
 
         var active by rememberSaveable { mutableStateOf(false) }
 
         val scope = rememberCoroutineScope()
 
         val shouldShowNavigationBar =
-            remember(navBackStackEntry, active) {
-                navBackStackEntry?.destination?.route == null ||
+            remember(navBackStackEntry, active, isTabletLandscape) {
+                (navBackStackEntry?.destination?.route == null ||
                         navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route } &&
-                        !active
+                        !active) && !isTabletLandscape
             }
 
         val navigationBarHeight by animateDpAsState(
@@ -212,66 +218,83 @@ fun RootView(
             // 提供智能WindowInsets给所有子Screen
             LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
         ) {
-            val drawerState = rememberDrawerState(DrawerValue.Closed)
+            val drawerState = rememberDrawerState(
+                initialValue = if (isTabletLandscape) DrawerValue.Open else DrawerValue.Closed
+            )
+
+            LaunchedEffect(isTabletLandscape) {
+                if (isTabletLandscape) {
+                    drawerState.open()
+                } else {
+                    drawerState.close()
+                }
+            }
 
             // 侧边栏打开时，先让返回键优先响应关闭侧边栏
-            BackHandler(enabled = drawerState.isOpen) {
+            BackHandler(enabled = drawerState.isOpen && !isTabletLandscape) {
                 scope.launch { drawerState.close() }
             }
 
-            DismissibleNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    AppDrawer(
-                        drawerState = drawerState,
-                        scope = scope,
-                        navController = navController,
-                        currentMainScreenRoute = currentMainScreenRoute
-                    )
-                },
-                gesturesEnabled = false
-            ) {
-                NavHost(
-                    navController = navController,
-                    startDestination = ScreenRoute.Explore.route,
-                    enterTransition = {
-                        slideInHorizontally(
-                            animationSpec = tween(500),
-                            initialOffsetX = { fullWidth -> fullWidth }
+            AnimatedContent(
+                targetState = adaptiveLayoutMode,
+                label = "adaptiveLayoutModeTransition"
+            ) { targetMode ->
+                val isTabletLandscapeInTransition = targetMode == AdaptiveLayoutMode.TabletLandscape
+                AdaptiveDrawerContainer(
+                    isTabletLandscape = isTabletLandscapeInTransition,
+                    drawerState = drawerState,
+                    drawerContent = {
+                        AppDrawer(
+                            drawerState = drawerState,
+                            scope = scope,
+                            navController = navController,
+                            currentMainScreenRoute = currentMainScreenRoute,
+                            isTabletLandscape = isTabletLandscapeInTransition,
                         )
                     },
-                    exitTransition = {
-                        slideOutHorizontally(
-                            animationSpec = tween(500),
-                            targetOffsetX = { fullWidth -> -fullWidth }
-                        )
-                    },
-                    popEnterTransition = {
-                        slideInHorizontally(
-                            animationSpec = tween(500),
-                            initialOffsetX = { fullWidth -> -fullWidth }
-                        )
-                    },
-                    popExitTransition = {
-                        slideOutHorizontally(
-                            animationSpec = tween(500),
-                            targetOffsetX = { fullWidth -> fullWidth }
-                        )
-                    },
-                    modifier = Modifier
                 ) {
-                    navigationBuilder(
-                        context = context,
+                    NavHost(
                         navController = navController,
-                        searchViewModel = searchViewModel,
-                        playerViewModel = playerViewModel,
-                        profileViewModel = profileViewModel,
-                        openDrawer = {
-                            scope.launch {
-                                if (drawerState.isClosed) drawerState.open() else drawerState.close()
-                            }
+                        startDestination = ScreenRoute.Explore.route,
+                        enterTransition = {
+                            slideInHorizontally(
+                                animationSpec = tween(500),
+                                initialOffsetX = { fullWidth -> fullWidth }
+                            )
                         },
-                    )
+                        exitTransition = {
+                            slideOutHorizontally(
+                                animationSpec = tween(500),
+                                targetOffsetX = { fullWidth -> -fullWidth }
+                            )
+                        },
+                        popEnterTransition = {
+                            slideInHorizontally(
+                                animationSpec = tween(500),
+                                initialOffsetX = { fullWidth -> -fullWidth }
+                            )
+                        },
+                        popExitTransition = {
+                            slideOutHorizontally(
+                                animationSpec = tween(500),
+                                targetOffsetX = { fullWidth -> fullWidth }
+                            )
+                        },
+                    ) {
+                        navigationBuilder(
+                            context = context,
+                            navController = navController,
+                            searchViewModel = searchViewModel,
+                            playerViewModel = playerViewModel,
+                            profileViewModel = profileViewModel,
+                            openDrawer = {
+                                if (isTabletLandscapeInTransition) return@navigationBuilder
+                                scope.launch {
+                                    if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                                }
+                            },
+                        )
+                    }
                 }
 
                 // 监听导航变化以折叠播放器
@@ -291,33 +314,35 @@ fun RootView(
                 context = context
             )
 
-            MainBottomBar(
-                navController = navController,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .offset {
-                        if (navigationBarHeight == 0.dp) {
-                            IntOffset(
-                                x = 0,
-                                y = (bottomInset + NavigationBarHeight).roundToPx(),
-                            )
-                        } else {
-                            val slideOffset =
-                                (bottomInset + NavigationBarHeight) *
-                                        playerBottomSheetState.progress.coerceIn(
-                                            0f,
-                                            1f,
-                                        )
-                            val hideOffset =
-                                (bottomInset + NavigationBarHeight) * (1 - navigationBarHeight / NavigationBarHeight)
-                            IntOffset(
-                                x = 0,
-                                y = (slideOffset + hideOffset).roundToPx(),
-                            )
+            if (!isTabletLandscape) {
+                MainBottomBar(
+                    navController = navController,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset {
+                            if (navigationBarHeight == 0.dp) {
+                                IntOffset(
+                                    x = 0,
+                                    y = (bottomInset + NavigationBarHeight).roundToPx(),
+                                )
+                            } else {
+                                val slideOffset =
+                                    (bottomInset + NavigationBarHeight) *
+                                            playerBottomSheetState.progress.coerceIn(
+                                                0f,
+                                                1f,
+                                            )
+                                val hideOffset =
+                                    (bottomInset + NavigationBarHeight) * (1 - navigationBarHeight / NavigationBarHeight)
+                                IntOffset(
+                                    x = 0,
+                                    y = (slideOffset + hideOffset).roundToPx(),
+                                )
+                            }
                         }
-                    }
-                    .navigationBarsPadding()
-            )
+                        .navigationBarsPadding()
+                )
+            }
 
         }
 

@@ -310,7 +310,7 @@ data class AlbumInfo(
     @SerializedName("commentThread")
     val commentThread: CommentThread? = null,
     @SerializedName("latestLikedUsers")
-    val latestLikedUsers: String? = null,
+    val latestLikedUsers: List<String?> = emptyList(),
     @SerializedName("liked")
     val liked: Boolean? = null,
     @SerializedName("comments")
@@ -345,7 +345,7 @@ data class CommentThread(
     @SerializedName("hotCount")
     val hotCount: Long? = null,
     @SerializedName("latestLikedUsers")
-    val latestLikedUsers: String? = null,
+    val latestLikedUsers: List<String?> = emptyList(),
     @SerializedName("resourceId")
     val resourceId: Long? = null,
     @SerializedName("resourceOwnerId")
