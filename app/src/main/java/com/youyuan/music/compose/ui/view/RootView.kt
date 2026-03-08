@@ -70,7 +70,6 @@ import com.youyuan.music.compose.ui.screens.navigationBuilder
 import com.youyuan.music.compose.ui.uicomponent.AdaptiveDrawerContainer
 import com.youyuan.music.compose.ui.uicomponent.NewYearFireworksOverlay
 import com.youyuan.music.compose.ui.utils.AdaptiveLayoutMode
-import com.youyuan.music.compose.ui.utils.contentHorizontalPadding
 import com.youyuan.music.compose.ui.utils.LocalPlayerAwareWindowInsets
 import com.youyuan.music.compose.ui.utils.rememberAdaptiveLayoutMode
 import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel

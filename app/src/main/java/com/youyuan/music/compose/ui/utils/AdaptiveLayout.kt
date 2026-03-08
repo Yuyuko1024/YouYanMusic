@@ -12,12 +12,6 @@ enum class AdaptiveLayoutMode {
     TabletLandscape,
 }
 
-val AdaptiveLayoutMode.contentHorizontalPadding: Dp
-    get() = when (this) {
-        AdaptiveLayoutMode.Phone -> 0.dp
-        AdaptiveLayoutMode.TabletLandscape -> 24.dp
-    }
-
 @Composable
 fun rememberAdaptiveLayoutMode(maxWidth: Dp): AdaptiveLayoutMode {
     val configuration = LocalConfiguration.current

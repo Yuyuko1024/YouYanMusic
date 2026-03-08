@@ -3,7 +3,7 @@ package com.youyuan.music.compose.ui.player
 import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,14 +53,14 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.constants.PlayerCoverVerticalPadding
-import com.youyuan.music.compose.constants.PlayerHorizontalPadding
+import com.youyuan.music.compose.ui.utils.AdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
+import com.youyuan.music.compose.ui.utils.rememberAdaptiveLayoutMode
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.utils.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
@@ -149,16 +148,19 @@ fun LyricsPager(
         }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .padding(
-                horizontal = PlayerHorizontalPadding,
+                horizontal = 18.dp,
                 vertical = PlayerCoverVerticalPadding
             )
     ) {
+        val adaptiveLayoutMode = rememberAdaptiveLayoutMode(maxWidth = maxWidth)
+        val isTabletLandscape = adaptiveLayoutMode == AdaptiveLayoutMode.TabletLandscape
+
         Column(Modifier.fillMaxSize()) {
-            if (currentPlaying != null) {
+            if (currentPlaying != null && isTabletLandscape) {
                 LyricsNowPlayingHeader(
                     mediaItem = currentPlaying,
                     color = uiColor,

@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,6 +62,7 @@ import com.moriafly.salt.ui.pager.VerticalPager
 import com.moriafly.salt.ui.pager.rememberPagerState
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.constants.PlayerHorizontalPadding
+import com.youyuan.music.compose.constants.PlayerVerticalPadding
 import com.youyuan.music.compose.pref.AudioQualityLevel
 import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.SettingsDataStore
@@ -91,7 +93,6 @@ import compose.icons.tablericons.Cast
 import compose.icons.tablericons.PlayerPause
 import compose.icons.tablericons.PlayerPlay
 import compose.icons.tablericons.Playlist
-import compose.icons.tablericons.Share
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -458,46 +459,44 @@ private fun ExpandedPlayerMainPage(
         )
 
         Column {
-            Row(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .systemBarsPadding(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = { state.collapseSoft() },
-                    modifier = modifier.padding(4.dp)
+            if (!isTabletLandscape) {
+                Row(
+                    modifier = modifier
+                        .fillMaxWidth()
+                        .systemBarsPadding()
+                        .padding(horizontal = PlayerHorizontalPadding, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = title,
+                            style = SaltTheme.textStyles.main,
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .basicMarquee(iterations = Int.MAX_VALUE),
+                            maxLines = 1,
+                            color = LocalPlayerUIColor.current
+                        )
+                        Text(
+                            text = artistName,
+                            style = SaltTheme.textStyles.sub,
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                            maxLines = 1,
+                            color = LocalPlayerUIColor.current
+                        )
+                    }
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_arrow_collapse),
-                        contentDescription = "收起抽屉",
+                        modifier = Modifier.padding(4.dp)
+                            .clickable(onClick = {
+                                SystemMediaDialogUtils.getInstance(context).showSystemMediaDialog()
+                            }),
+                        painter = rememberVectorPainter(TablerIcons.Cast),
+                        contentDescription = "投送",
                         tint = LocalPlayerUIColor.current
                     )
-                }
-                Spacer(modifier = Modifier.weight(1f))
-                Row {
-                    IconButton(
-                        onClick = {
-                            SystemMediaDialogUtils.getInstance(context).showSystemMediaDialog()
-                        },
-                        modifier = modifier.padding(4.dp)
-                    ) {
-                        Icon(
-                            painter = rememberVectorPainter(TablerIcons.Cast),
-                            contentDescription = "投送",
-                            tint = LocalPlayerUIColor.current
-                        )
-                    }
-                    IconButton(
-                        onClick = {},
-                        modifier = modifier.padding(4.dp)
-                    ) {
-                        Icon(
-                            painter = rememberVectorPainter(TablerIcons.Share),
-                            contentDescription = "分享",
-                            tint = LocalPlayerUIColor.current
-                        )
-                    }
                 }
             }
 
@@ -535,6 +534,8 @@ private fun ExpandedPlayerMainPage(
                         contentAlignment = Alignment.Center
                     ) {
                         PlayerControlsSection(
+                            context = context,
+                            isTabletLandscape = isTabletLandscape,
                             horizontalPagerState = horizontalPagerState,
                             verticalPagerState = verticalPagerState,
                             coroutineScope = coroutineScope,
@@ -587,6 +588,8 @@ private fun ExpandedPlayerMainPage(
                 }
 
                 PlayerControlsSection(
+                    context = context,
+                    isTabletLandscape = isTabletLandscape,
                     horizontalPagerState = horizontalPagerState,
                     verticalPagerState = verticalPagerState,
                     coroutineScope = coroutineScope,
@@ -626,6 +629,8 @@ private fun ExpandedPlayerMainPage(
 @UnstableSaltUiApi
 @UnstableApi
 private fun PlayerControlsSection(
+    context: Activity,
+    isTabletLandscape: Boolean,
     horizontalPagerState: PagerState,
     verticalPagerState: PagerState,
     coroutineScope: CoroutineScope,
@@ -663,45 +668,63 @@ private fun PlayerControlsSection(
                 .fillMaxWidth()
                 .padding(horizontal = 6.dp),
         ) {
-            Row(Modifier
-                .fillMaxWidth()
-                .align(Alignment.CenterVertically)
-                .weight(1f)
-            ) {
-                AnimatedVisibility(
-                    modifier = Modifier
-                        .align(Alignment.CenterVertically),
-                    visible = horizontalPagerState.currentPage != 2,
-                    enter = fadeIn(),
-                    exit = fadeOut()
+            if (isTabletLandscape) {
+                Row(Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.CenterVertically)
+                    .weight(1f)
                 ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
+                    AnimatedVisibility(
+                        modifier = Modifier
+                            .align(Alignment.CenterVertically),
+                        visible = horizontalPagerState.currentPage != 2,
+                        enter = fadeIn(),
+                        exit = fadeOut()
                     ) {
-                        Text(
-                            text = title,
-                            style = SaltTheme.textStyles.main,
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                                .basicMarquee(iterations = Int.MAX_VALUE),
-                            maxLines = 1,
-                            color = LocalPlayerUIColor.current
-                        )
-                        Text(
-                            text = artistName,
-                            style = SaltTheme.textStyles.sub,
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                            maxLines = 1,
-                            color = LocalPlayerUIColor.current
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = title,
+                                style = SaltTheme.textStyles.main,
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    .basicMarquee(iterations = Int.MAX_VALUE),
+                                maxLines = 1,
+                                color = LocalPlayerUIColor.current
+                            )
+                            Text(
+                                text = artistName,
+                                style = SaltTheme.textStyles.sub,
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                maxLines = 1,
+                                color = LocalPlayerUIColor.current
+                            )
+                        }
                     }
                 }
+            } else {
+                Spacer(Modifier.weight(1f))
             }
             Row(
                 modifier = Modifier
                     .align(Alignment.CenterVertically)
             ) {
+                if (isTabletLandscape) {
+                    IconButton(
+                        onClick = {
+                            SystemMediaDialogUtils.getInstance(context).showSystemMediaDialog()
+                        },
+                        modifier = Modifier.padding(4.dp),
+                    ) {
+                        Icon(
+                            painter = rememberVectorPainter(TablerIcons.Cast),
+                            contentDescription = "投送",
+                            tint = LocalPlayerUIColor.current
+                        )
+                    }
+                }
                 IconButton(
                     onClick = onToggleFavorite,
                     modifier = Modifier.padding(4.dp)
@@ -719,9 +742,10 @@ private fun PlayerControlsSection(
                 Box {
                     IconButton(
                         onClick = {
-                            val songId = currentSongId
-                            if (songId != null) {
-                                navController.navigate(ScreenRoute.SongComments.createRoute(songId))
+                            if (currentSongId != null) {
+                                navController.navigate(ScreenRoute.SongComments.createRoute(
+                                    currentSongId
+                                ))
                             }
                         },
                         modifier = Modifier.padding(4.dp)
