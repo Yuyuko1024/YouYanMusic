@@ -43,7 +43,9 @@ fun AccountHeaderCard(
 ) {
     // 账户信息卡片组件
     Card(
-        modifier = modifier.fillMaxWidth().padding(16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
         elevation = CardDefaults.cardElevation(),
         border = BorderStroke(1.dp, SaltTheme.colors.stroke),
         colors = CardColors(
@@ -78,7 +80,7 @@ fun AccountHeaderCard(
                     .matchParentSize()
                     .background(Color.DarkGray.copy(alpha = 0.3f))
             )
-            Column (
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(24.dp)
@@ -99,13 +101,18 @@ fun AccountHeaderCard(
                 )
                 Spacer(modifier = Modifier.size(8.dp))
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .align(Alignment.CenterHorizontally)
                 ) {
-                    Row(Modifier.padding(vertical = 8.dp)
-                        .align(Alignment.CenterHorizontally)) {
+                    Row(
+                        Modifier
+                            .padding(vertical = 8.dp)
+                            .align(Alignment.CenterHorizontally)
+                    ) {
                         Text(
-                            text = profile?.nickname ?: stringResource(R.string.not_logged_in_account),
+                            text = profile?.nickname
+                                ?: stringResource(R.string.not_logged_in_account),
                             style = SaltTheme.textStyles.main,
                             maxLines = 1,
                             color = Color.White,

@@ -43,14 +43,18 @@ class ExploreViewModel @Inject constructor(
     private val _bannerError = MutableStateFlow<String?>(null)
     val bannerError: StateFlow<String?> = _bannerError.asStateFlow()
 
-    private val _dailyRecommendPlaylists = MutableStateFlow<List<RecommendResourceItem>>(emptyList())
-    val dailyRecommendPlaylists: StateFlow<List<RecommendResourceItem>> = _dailyRecommendPlaylists.asStateFlow()
+    private val _dailyRecommendPlaylists =
+        MutableStateFlow<List<RecommendResourceItem>>(emptyList())
+    val dailyRecommendPlaylists: StateFlow<List<RecommendResourceItem>> =
+        _dailyRecommendPlaylists.asStateFlow()
 
     private val _dailyRecommendPlaylistsLoading = MutableStateFlow(false)
-    val dailyRecommendPlaylistsLoading: StateFlow<Boolean> = _dailyRecommendPlaylistsLoading.asStateFlow()
+    val dailyRecommendPlaylistsLoading: StateFlow<Boolean> =
+        _dailyRecommendPlaylistsLoading.asStateFlow()
 
     private val _dailyRecommendPlaylistsError = MutableStateFlow<String?>(null)
-    val dailyRecommendPlaylistsError: StateFlow<String?> = _dailyRecommendPlaylistsError.asStateFlow()
+    val dailyRecommendPlaylistsError: StateFlow<String?> =
+        _dailyRecommendPlaylistsError.asStateFlow()
 
     private val _dailyRecommendSongs = MutableStateFlow<List<SongDetail>>(emptyList())
     val dailyRecommendSongs: StateFlow<List<SongDetail>> = _dailyRecommendSongs.asStateFlow()
@@ -70,17 +74,21 @@ class ExploreViewModel @Inject constructor(
     private val _personalFmSongsError = MutableStateFlow<String?>(null)
     val personalFmSongsError: StateFlow<String?> = _personalFmSongsError.asStateFlow()
 
-    private val _personalizedPlaylists = MutableStateFlow<List<PersonalizedPlaylistItem>>(emptyList())
-    val personalizedPlaylists: StateFlow<List<PersonalizedPlaylistItem>> = _personalizedPlaylists.asStateFlow()
+    private val _personalizedPlaylists =
+        MutableStateFlow<List<PersonalizedPlaylistItem>>(emptyList())
+    val personalizedPlaylists: StateFlow<List<PersonalizedPlaylistItem>> =
+        _personalizedPlaylists.asStateFlow()
 
     private val _personalizedPlaylistsLoading = MutableStateFlow(false)
-    val personalizedPlaylistsLoading: StateFlow<Boolean> = _personalizedPlaylistsLoading.asStateFlow()
+    val personalizedPlaylistsLoading: StateFlow<Boolean> =
+        _personalizedPlaylistsLoading.asStateFlow()
 
     private val _personalizedPlaylistsError = MutableStateFlow<String?>(null)
     val personalizedPlaylistsError: StateFlow<String?> = _personalizedPlaylistsError.asStateFlow()
 
     private val _personalizedNewSongs = MutableStateFlow<List<PersonalizedNewSongItem>>(emptyList())
-    val personalizedNewSongs: StateFlow<List<PersonalizedNewSongItem>> = _personalizedNewSongs.asStateFlow()
+    val personalizedNewSongs: StateFlow<List<PersonalizedNewSongItem>> =
+        _personalizedNewSongs.asStateFlow()
 
     private val _personalizedNewSongsLoading = MutableStateFlow(false)
     val personalizedNewSongsLoading: StateFlow<Boolean> = _personalizedNewSongsLoading.asStateFlow()
@@ -238,7 +246,8 @@ class ExploreViewModel @Inject constructor(
                     _personalizedPlaylists.value = resp.result.orEmpty()
                 } else {
                     _personalizedPlaylists.value = emptyList()
-                    _personalizedPlaylistsError.value = "personalized 接口返回异常 code=${resp.code}"
+                    _personalizedPlaylistsError.value =
+                        "personalized 接口返回异常 code=${resp.code}"
                 }
             } catch (e: Exception) {
                 _personalizedPlaylists.value = emptyList()
@@ -263,7 +272,8 @@ class ExploreViewModel @Inject constructor(
                     _personalizedNewSongs.value = resp.result.orEmpty()
                 } else {
                     _personalizedNewSongs.value = emptyList()
-                    _personalizedNewSongsError.value = "personalized/newsong 接口返回异常 code=${resp.code}"
+                    _personalizedNewSongsError.value =
+                        "personalized/newsong 接口返回异常 code=${resp.code}"
                 }
             } catch (e: Exception) {
                 _personalizedNewSongs.value = emptyList()
@@ -317,7 +327,8 @@ class ExploreViewModel @Inject constructor(
                     _dailyRecommendPlaylists.value = resp.recommend.orEmpty()
                 } else {
                     _dailyRecommendPlaylists.value = emptyList()
-                    _dailyRecommendPlaylistsError.value = "recommend/resource 接口返回异常 code=${resp.code}"
+                    _dailyRecommendPlaylistsError.value =
+                        "recommend/resource 接口返回异常 code=${resp.code}"
                 }
             } catch (e: Exception) {
                 _dailyRecommendPlaylists.value = emptyList()
@@ -346,7 +357,8 @@ class ExploreViewModel @Inject constructor(
                     _dailyRecommendSongs.value = resp.data?.dailySongs.orEmpty()
                 } else {
                     _dailyRecommendSongs.value = emptyList()
-                    _dailyRecommendSongsError.value = "recommend/songs 接口返回异常 code=${resp.code}"
+                    _dailyRecommendSongsError.value =
+                        "recommend/songs 接口返回异常 code=${resp.code}"
                 }
             } catch (e: Exception) {
                 _dailyRecommendSongs.value = emptyList()

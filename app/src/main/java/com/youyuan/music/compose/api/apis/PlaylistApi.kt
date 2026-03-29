@@ -13,7 +13,7 @@ interface PlaylistApi {
         @Query("offset") offset: Int = 0,
         @Query("cat") category: String = "全部",
         @Query("order") order: String = "hot"
-    ) : TopPlaylistResponse
+    ): TopPlaylistResponse
 
     @GET("/playlist/detail")
     suspend fun getPlaylistDetail(

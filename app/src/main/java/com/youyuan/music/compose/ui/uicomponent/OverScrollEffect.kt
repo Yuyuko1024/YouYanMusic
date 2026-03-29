@@ -56,9 +56,18 @@ import kotlin.math.sqrt
  * so we need this variable to have the same expectations on different devices.
  */
 @Stable
-fun parabolaScrollEasing(currentOffset: Float, newOffset: Float, p: Float = 50f, density: Float = 4f): Float {
+fun parabolaScrollEasing(
+    currentOffset: Float,
+    newOffset: Float,
+    p: Float = 50f,
+    density: Float = 4f
+): Float {
     val realP = p * density
-    val ratio = (realP / (sqrt(realP * abs(currentOffset + newOffset / 2).coerceAtLeast(Float.MIN_VALUE)))).coerceIn(Float.MIN_VALUE, 1f)
+    val ratio =
+        (realP / (sqrt(realP * abs(currentOffset + newOffset / 2).coerceAtLeast(Float.MIN_VALUE)))).coerceIn(
+            Float.MIN_VALUE,
+            1f
+        )
     return if (sign(currentOffset) == sign(newOffset)) {
         currentOffset + newOffset * ratio
     } else {
@@ -69,7 +78,8 @@ fun parabolaScrollEasing(currentOffset: Float, newOffset: Float, p: Float = 50f,
 /**
  * Linear, you probably wouldn't think of using it.
  */
-val LinearScrollEasing: (currentOffset: Float, newOffset: Float) -> Float = { currentOffset, newOffset -> currentOffset + newOffset }
+val LinearScrollEasing: (currentOffset: Float, newOffset: Float) -> Float =
+    { currentOffset, newOffset -> currentOffset + newOffset }
 
 internal val DefaultParabolaScrollEasing: (currentOffset: Float, newOffset: Float) -> Float
     @Composable
@@ -91,7 +101,13 @@ fun Modifier.overScrollVertical(
     scrollEasing: ((currentOffset: Float, newOffset: Float) -> Float)? = null,
     springStiff: Float = OutBoundSpringStiff,
     springDamp: Float = OutBoundSpringDamp,
-): Modifier = overScrollOutOfBound(isVertical = true, nestedScrollToParent, scrollEasing, springStiff, springDamp)
+): Modifier = overScrollOutOfBound(
+    isVertical = true,
+    nestedScrollToParent,
+    scrollEasing,
+    springStiff,
+    springDamp
+)
 
 /**
  * @see overScrollOutOfBound
@@ -101,7 +117,13 @@ fun Modifier.overScrollHorizontal(
     scrollEasing: ((currentOffset: Float, newOffset: Float) -> Float)? = null,
     springStiff: Float = OutBoundSpringStiff,
     springDamp: Float = OutBoundSpringDamp,
-): Modifier = overScrollOutOfBound(isVertical = false, nestedScrollToParent, scrollEasing, springStiff, springDamp)
+): Modifier = overScrollOutOfBound(
+    isVertical = false,
+    nestedScrollToParent,
+    scrollEasing,
+    springStiff,
+    springDamp
+)
 
 /**
  * OverScroll effect for scrollable Composable .
@@ -154,8 +176,12 @@ fun Modifier.overScrollOutOfBound(
                     }
                 }
                 val realAvailable = when {
-                    nestedScrollToParent -> available - dispatcher.dispatchPreScroll(available, source)
-                    else                 -> available
+                    nestedScrollToParent -> available - dispatcher.dispatchPreScroll(
+                        available,
+                        source
+                    )
+
+                    else -> available
                 }
                 val realOffset = if (isVertical) realAvailable.y else realAvailable.x
 
@@ -168,9 +194,15 @@ fun Modifier.overScrollOutOfBound(
                 return if (sign(offset) != sign(offsetAtLast)) {
                     offset = 0f
                     if (isVertical) {
-                        Offset(x = available.x - realAvailable.x, y = available.y - realAvailable.y + realOffset)
+                        Offset(
+                            x = available.x - realAvailable.x,
+                            y = available.y - realAvailable.y + realOffset
+                        )
                     } else {
-                        Offset(x = available.x - realAvailable.x + realOffset, y = available.y - realAvailable.y)
+                        Offset(
+                            x = available.x - realAvailable.x + realOffset,
+                            y = available.y - realAvailable.y
+                        )
                     }
                 } else {
                     offset = offsetAtLast
@@ -182,14 +214,23 @@ fun Modifier.overScrollOutOfBound(
                 }
             }
 
-            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
                 // Found fling behavior in the wrong direction.
                 if (source != NestedScrollSource.Drag) {
                     return dispatcher.dispatchPreScroll(available, source)
                 }
                 val realAvailable = when {
-                    nestedScrollToParent -> available - dispatcher.dispatchPostScroll(consumed, available, source)
-                    else                 -> available
+                    nestedScrollToParent -> available - dispatcher.dispatchPostScroll(
+                        consumed,
+                        available,
+                        source
+                    )
+
+                    else -> available
                 }
                 offset = scrollEasing(offset, if (isVertical) realAvailable.y else realAvailable.x)
                 return if (isVertical) {
@@ -205,7 +246,7 @@ fun Modifier.overScrollOutOfBound(
                 }
                 val parentConsumed = when {
                     nestedScrollToParent -> dispatcher.dispatchPreFling(available)
-                    else                 -> Velocity.Zero
+                    else -> Velocity.Zero
                 }
                 val realAvailable = available - parentConsumed
                 var leftVelocity = if (isVertical) realAvailable.y else realAvailable.x
@@ -217,7 +258,11 @@ fun Modifier.overScrollOutOfBound(
                             leftVelocity > 0 -> updateBounds(upperBound = 0f)
                         }
                     }
-                    leftVelocity = lastFlingAnimator.animateTo(0f, spring(springDamp, springStiff, visibilityThreshold), leftVelocity) {
+                    leftVelocity = lastFlingAnimator.animateTo(
+                        0f,
+                        spring(springDamp, springStiff, visibilityThreshold),
+                        leftVelocity
+                    ) {
                         offset = scrollEasing(offset, value - offset)
                     }.endState.velocity
                 }
@@ -230,12 +275,20 @@ fun Modifier.overScrollOutOfBound(
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
                 val realAvailable = when {
-                    nestedScrollToParent -> available - dispatcher.dispatchPostFling(consumed, available)
-                    else                 -> available
+                    nestedScrollToParent -> available - dispatcher.dispatchPostFling(
+                        consumed,
+                        available
+                    )
+
+                    else -> available
                 }
 
                 lastFlingAnimator = Animatable(offset)
-                lastFlingAnimator.animateTo(0f, spring(springDamp, springStiff, visibilityThreshold), if (isVertical) realAvailable.y else realAvailable.x) {
+                lastFlingAnimator.animateTo(
+                    0f,
+                    spring(springDamp, springStiff, visibilityThreshold),
+                    if (isVertical) realAvailable.y else realAvailable.x
+                ) {
                     offset = scrollEasing(offset, value - offset)
                 }
                 return if (isVertical) {

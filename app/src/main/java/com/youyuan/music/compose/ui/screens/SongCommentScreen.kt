@@ -35,16 +35,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil3.compose.AsyncImage
-import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.Icon
 import com.moriafly.salt.ui.ItemOuterTextButton
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
-import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
-import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
-import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.api.model.CommentItem
+import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
+import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.SongCommentViewModel
 import compose.icons.TablerIcons
 import compose.icons.tablericons.Heart
@@ -93,98 +92,100 @@ fun SongCommentScreen(
                 .pullRefresh(pullRefreshState)
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().overScrollVertical(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .overScrollVertical(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-            item {
-                Text(
-                    text = buildString {
-                        append(stringResource(R.string.comments_title))
-                        if (total > 0) append(" ($total)")
-                    },
-                    color = SaltTheme.colors.text,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            if (error != null) {
                 item {
                     Text(
-                        text = error ?: "",
-                        color = MaterialTheme.colorScheme.error,
+                        text = buildString {
+                            append(stringResource(R.string.comments_title))
+                            if (total > 0) append(" ($total)")
+                        },
+                        color = SaltTheme.colors.text,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-            }
 
-            if (hotComments.isNotEmpty()) {
+                if (error != null) {
+                    item {
+                        Text(
+                            text = error ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                }
+
+                if (hotComments.isNotEmpty()) {
+                    item {
+                        SectionHeader(title = stringResource(R.string.comments_hot))
+                    }
+                    items(hotComments.size) { idx ->
+                        CommentRow(comment = hotComments[idx])
+                    }
+                }
+
                 item {
-                    SectionHeader(title = stringResource(R.string.comments_hot))
+                    SectionHeader(title = stringResource(R.string.comments_latest))
                 }
-                items(hotComments.size) { idx ->
-                    CommentRow(comment = hotComments[idx])
+
+                items(comments.size) { idx ->
+                    CommentRow(comment = comments[idx])
                 }
-            }
 
-            item {
-                SectionHeader(title = stringResource(R.string.comments_latest))
-            }
+                item {
+                    when {
+                        isLoadingMore -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            }
+                        }
 
-            items(comments.size) { idx ->
-                CommentRow(comment = comments[idx])
-            }
+                        hasMore -> {
+                            ItemOuterTextButton(
+                                onClick = { viewModel.loadMore() },
+                                text = stringResource(R.string.comments_load_more),
+                            )
+                        }
 
-            item {
-                when {
-                    isLoadingMore -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        else -> {
+                            Text(
+                                text = stringResource(R.string.comments_no_more),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                color = SaltTheme.colors.subText,
+                            )
                         }
                     }
-
-                    hasMore -> {
-                        ItemOuterTextButton(
-                            onClick = { viewModel.loadMore() },
-                            text = stringResource(R.string.comments_load_more),
-                        )
-                    }
-
-                    else -> {
-                        Text(
-                            text = stringResource(R.string.comments_no_more),
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            color = SaltTheme.colors.subText,
-                        )
-                    }
+                    Spacer(modifier = Modifier.size(12.dp))
                 }
-                Spacer(modifier = Modifier.size(12.dp))
+            }
+
+            PullRefreshIndicator(
+                refreshing = isRefreshing,
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+
+            if (isRefreshing && hotComments.isEmpty() && comments.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
             }
         }
-
-        PullRefreshIndicator(
-            refreshing = isRefreshing,
-            state = pullRefreshState,
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
-
-        if (isRefreshing && hotComments.isEmpty() && comments.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        }
-    }
     }
 }
 

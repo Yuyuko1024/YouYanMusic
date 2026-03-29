@@ -5,18 +5,16 @@ import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.Strictness
-import okhttp3.Interceptor
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import kotlin.getValue
-import androidx.core.net.toUri
 import java.util.concurrent.atomic.AtomicReference
 
 class ApiClient private constructor(
@@ -38,7 +36,11 @@ class ApiClient private constructor(
          */
         fun getInstance(context: Context, baseUrl: String, isDebug: Boolean = false): ApiClient {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: ApiClient(context.applicationContext, baseUrl, isDebug).also { INSTANCE = it }
+                INSTANCE ?: ApiClient(
+                    context.applicationContext,
+                    baseUrl,
+                    isDebug
+                ).also { INSTANCE = it }
             }
         }
 
@@ -78,7 +80,10 @@ class ApiClient private constructor(
             .addInterceptor { chain ->
                 val original = chain.request()
                 val request = original.newBuilder()
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header(
+                        "User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                    )
                     .header("Accept", "application/json, text/plain, */*")
                     .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
                     .method(original.method, original.body)
@@ -210,7 +215,7 @@ class ApiClient private constructor(
     fun clearCookiesForHost(host: String) {
         cookieManager.clearForHost(host)
     }
-    
+
     /**
      * 手动保存 cookie 字符串（用于从响应 body 中获取的 cookie）
      */
@@ -223,7 +228,7 @@ class ApiClient private constructor(
         }
         cookieManager.saveCookieString(host, cookieString)
     }
-    
+
     /**
      * 检查是否有已保存的 cookie
      */

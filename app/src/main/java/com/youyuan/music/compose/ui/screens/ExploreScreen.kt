@@ -25,8 +25,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
-import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -59,9 +59,9 @@ import com.youyuan.music.compose.api.model.ToplistItem
 import com.youyuan.music.compose.ui.uicomponent.overScrollHorizontal
 import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.view.MainTabScaffold
+import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import com.youyuan.music.compose.ui.viewmodel.ExploreViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
-import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 import kotlinx.coroutines.delay
 
@@ -123,10 +123,10 @@ fun ExploreScreen(
     }
 
     val refreshing = bannerLoading ||
-        personalizedPlaylistsLoading ||
-        newSongsLoading ||
-        toplistsLoading ||
-        (isLoggedIn && (dailyRecommendPlaylistsLoading || dailyRecommendSongsLoading || personalFmSongsLoading))
+            personalizedPlaylistsLoading ||
+            newSongsLoading ||
+            toplistsLoading ||
+            (isLoggedIn && (dailyRecommendPlaylistsLoading || dailyRecommendSongsLoading || personalFmSongsLoading))
 
     val pullRefreshState = rememberPullRefreshState(
         refreshing = refreshing,
@@ -152,39 +152,132 @@ fun ExploreScreen(
                     .padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-            item {
-                BannerSection(
-                    banners = banners,
-                    loading = bannerLoading,
-                    error = bannerError,
-                    onBannerClick = { item ->
-                        val url = item.url
-                        if (!url.isNullOrBlank()) {
-                            navController.navigate(ScreenRoute.InAppWebView.createRoute(url))
+                item {
+                    BannerSection(
+                        banners = banners,
+                        loading = bannerLoading,
+                        error = bannerError,
+                        onBannerClick = { item ->
+                            val url = item.url
+                            if (!url.isNullOrBlank()) {
+                                navController.navigate(ScreenRoute.InAppWebView.createRoute(url))
+                            }
                         }
-                    }
-                )
-            }
-
-            item {
-                if (!isLoggedIn) {
-                    LoginRequiredCard(
-                        text = "登录后可查看：每日推荐歌单 / 每日推荐歌曲 / 私人FM",
-                        onLoginClick = { navController.navigate(ScreenRoute.LoginPage.route) }
                     )
                 }
-            }
 
-            if (isLoggedIn) {
                 item {
-                    SectionTitle(text = "推荐歌单")
+                    if (!isLoggedIn) {
+                        LoginRequiredCard(
+                            text = "登录后可查看：每日推荐歌单 / 每日推荐歌曲 / 私人FM",
+                            onLoginClick = { navController.navigate(ScreenRoute.LoginPage.route) }
+                        )
+                    }
+                }
+
+                if (isLoggedIn) {
+                    item {
+                        SectionTitle(text = "推荐歌单")
+                    }
+
+                    item {
+                        PersonalizedPlaylistSection(
+                            playlists = personalizedPlaylists,
+                            loading = personalizedPlaylistsLoading,
+                            error = personalizedPlaylistsError,
+                            onPlaylistClick = { playlistId ->
+                                navController.navigate(
+                                    ScreenRoute.PlaylistDetail.createRoute(
+                                        playlistId
+                                    )
+                                )
+                            }
+                        )
+                    }
+
+                    item {
+                        SectionTitleWithAction(
+                            text = "私人FM",
+                            actionText = "刷新",
+                            actionEnabled = !personalFmSongsLoading,
+                            onActionClick = {
+                                exploreViewModel.loadPersonalFm(
+                                    isLoggedIn = isLoggedIn,
+                                    force = true
+                                )
+                            }
+                        )
+                    }
+
+                    item {
+                        PersonalFmSection(
+                            songs = personalFmSongs,
+                            loading = personalFmSongsLoading,
+                            error = personalFmSongsError,
+                            onSongClick = { songId ->
+                                val ids = personalFmSongs.map { it.id }
+                                if (ids.isNotEmpty()) {
+                                    playerViewModel.playTargetSongWithPlaylist(
+                                        targetSongId = songId,
+                                        allSongIds = ids,
+                                    )
+                                }
+                            }
+                        )
+                    }
+
+                    item {
+                        SectionTitle(text = "每日推荐歌曲")
+                    }
+
+                    item {
+                        DailyRecommendSongsSection(
+                            songs = dailyRecommendSongs,
+                            loading = dailyRecommendSongsLoading,
+                            error = dailyRecommendSongsError,
+                            onSongClick = { songId ->
+                                val ids = dailyRecommendSongs.map { it.id }
+                                if (ids.isNotEmpty()) {
+                                    playerViewModel.playTargetSongWithPlaylist(
+                                        targetSongId = songId,
+                                        allSongIds = ids,
+                                    )
+                                }
+                            }
+                        )
+                    }
                 }
 
                 item {
-                    PersonalizedPlaylistSection(
-                        playlists = personalizedPlaylists,
-                        loading = personalizedPlaylistsLoading,
-                        error = personalizedPlaylistsError,
+                    SectionTitle(text = "新歌推荐")
+                }
+
+                item {
+                    NewSongSection(
+                        songs = newSongs,
+                        loading = newSongsLoading,
+                        error = newSongsError,
+                        onSongClick = { songId ->
+                            val ids = newSongs.mapNotNull { it.resolvedSongId() }
+                            if (songId != null && ids.isNotEmpty()) {
+                                playerViewModel.playTargetSongWithPlaylist(
+                                    targetSongId = songId,
+                                    allSongIds = ids,
+                                )
+                            }
+                        }
+                    )
+                }
+
+                item {
+                    SectionTitle(text = "每日推荐歌单")
+                }
+
+                item {
+                    DailyRecommendPlaylistSection(
+                        playlists = dailyRecommendPlaylists,
+                        loading = dailyRecommendPlaylistsLoading,
+                        error = dailyRecommendPlaylistsError,
                         onPlaylistClick = { playlistId ->
                             navController.navigate(ScreenRoute.PlaylistDetail.createRoute(playlistId))
                         }
@@ -192,119 +285,33 @@ fun ExploreScreen(
                 }
 
                 item {
-                    SectionTitleWithAction(
-                        text = "私人FM",
-                        actionText = "刷新",
-                        actionEnabled = !personalFmSongsLoading,
-                        onActionClick = {
-                            exploreViewModel.loadPersonalFm(isLoggedIn = isLoggedIn, force = true)
+                    SectionTitle(text = "排行榜")
+                }
+
+                item {
+                    ToplistSection(
+                        toplists = toplists,
+                        loading = toplistsLoading,
+                        error = toplistsError,
+                        onToplistClick = { playlistId ->
+                            navController.navigate(ScreenRoute.PlaylistDetail.createRoute(playlistId))
                         }
                     )
                 }
 
                 item {
-                    PersonalFmSection(
-                        songs = personalFmSongs,
-                        loading = personalFmSongsLoading,
-                        error = personalFmSongsError,
-                        onSongClick = { songId ->
-                            val ids = personalFmSongs.map { it.id }
-                            if (ids.isNotEmpty()) {
-                                playerViewModel.playTargetSongWithPlaylist(
-                                    targetSongId = songId,
-                                    allSongIds = ids,
-                                )
-                            }
-                        }
-                    )
-                }
-
-                item {
-                    SectionTitle(text = "每日推荐歌曲")
-                }
-
-                item {
-                    DailyRecommendSongsSection(
-                        songs = dailyRecommendSongs,
-                        loading = dailyRecommendSongsLoading,
-                        error = dailyRecommendSongsError,
-                        onSongClick = { songId ->
-                            val ids = dailyRecommendSongs.map { it.id }
-                            if (ids.isNotEmpty()) {
-                                playerViewModel.playTargetSongWithPlaylist(
-                                    targetSongId = songId,
-                                    allSongIds = ids,
-                                )
-                            }
-                        }
-                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
 
-            item {
-                SectionTitle(text = "新歌推荐")
-            }
-
-            item {
-                NewSongSection(
-                    songs = newSongs,
-                    loading = newSongsLoading,
-                    error = newSongsError,
-                    onSongClick = { songId ->
-                        val ids = newSongs.mapNotNull { it.resolvedSongId() }
-                        if (songId != null && ids.isNotEmpty()) {
-                            playerViewModel.playTargetSongWithPlaylist(
-                                targetSongId = songId,
-                                allSongIds = ids,
-                            )
-                        }
-                    }
-                )
-            }
-
-            item {
-                SectionTitle(text = "每日推荐歌单")
-            }
-
-            item {
-                DailyRecommendPlaylistSection(
-                    playlists = dailyRecommendPlaylists,
-                    loading = dailyRecommendPlaylistsLoading,
-                    error = dailyRecommendPlaylistsError,
-                    onPlaylistClick = { playlistId ->
-                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(playlistId))
-                    }
-                )
-            }
-
-            item {
-                SectionTitle(text = "排行榜")
-            }
-
-            item {
-                ToplistSection(
-                    toplists = toplists,
-                    loading = toplistsLoading,
-                    error = toplistsError,
-                    onToplistClick = { playlistId ->
-                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(playlistId))
-                    }
-                )
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(12.dp))
-            }
+            PullRefreshIndicator(
+                refreshing = refreshing,
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
         }
 
-        PullRefreshIndicator(
-            refreshing = refreshing,
-            state = pullRefreshState,
-            modifier = Modifier.align(Alignment.TopCenter)
-        )
     }
-
-}
 
 }
 
@@ -345,12 +352,32 @@ private fun DailyRecommendPlaylistSection(
     modifier: Modifier = Modifier,
 ) {
     when {
-        loading -> Text(text = "加载中...", style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
-        !error.isNullOrBlank() -> Text(text = error, style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
-        playlists.isEmpty() -> Text(text = "暂无每日推荐歌单", style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
+        loading -> Text(
+            text = "加载中...",
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = modifier
+        )
+
+        !error.isNullOrBlank() -> Text(
+            text = error,
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = modifier
+        )
+
+        playlists.isEmpty() -> Text(
+            text = "暂无每日推荐歌单",
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = modifier
+        )
+
         else -> {
             LazyRow(
-                modifier = modifier.fillMaxWidth().overScrollHorizontal(),
+                modifier = modifier
+                    .fillMaxWidth()
+                    .overScrollHorizontal(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(playlists, key = { it.id }) { pl ->
@@ -375,9 +402,27 @@ private fun DailyRecommendSongsSection(
     modifier: Modifier = Modifier,
 ) {
     when {
-        loading -> Text(text = "加载中...", style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
-        !error.isNullOrBlank() -> Text(text = error, style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
-        songs.isEmpty() -> Text(text = "暂无每日推荐歌曲", style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
+        loading -> Text(
+            text = "加载中...",
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = modifier
+        )
+
+        !error.isNullOrBlank() -> Text(
+            text = error,
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = modifier
+        )
+
+        songs.isEmpty() -> Text(
+            text = "暂无每日推荐歌曲",
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = modifier
+        )
+
         else -> {
             Column(modifier = modifier.fillMaxWidth()) {
                 songs.take(10).forEach { detail ->
@@ -406,7 +451,8 @@ private fun DailyRecommendSongsSection(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            val artist = detail.ar?.joinToString(", ") { it.name.orEmpty() }?.takeIf { it.isNotBlank() }
+                            val artist = detail.ar?.joinToString(", ") { it.name.orEmpty() }
+                                ?.takeIf { it.isNotBlank() }
                             if (!artist.isNullOrBlank()) {
                                 Text(
                                     text = artist,
@@ -433,9 +479,27 @@ private fun PersonalFmSection(
     modifier: Modifier = Modifier,
 ) {
     when {
-        loading -> Text(text = "加载中...", style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
-        !error.isNullOrBlank() -> Text(text = error, style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
-        songs.isEmpty() -> Text(text = "暂无私人FM", style = SaltTheme.textStyles.sub, color = SaltTheme.colors.subText, modifier = modifier)
+        loading -> Text(
+            text = "加载中...",
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = modifier
+        )
+
+        !error.isNullOrBlank() -> Text(
+            text = error,
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = modifier
+        )
+
+        songs.isEmpty() -> Text(
+            text = "暂无私人FM",
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = modifier
+        )
+
         else -> {
             Column(modifier = modifier.fillMaxWidth()) {
                 songs.take(10).forEach { fm ->
@@ -464,7 +528,8 @@ private fun PersonalFmSection(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            val artist = fm.artists?.joinToString(", ") { it.name.orEmpty() }?.takeIf { it.isNotBlank() }
+                            val artist = fm.artists?.joinToString(", ") { it.name.orEmpty() }
+                                ?.takeIf { it.isNotBlank() }
                             if (!artist.isNullOrBlank()) {
                                 Text(
                                     text = artist,
@@ -567,7 +632,9 @@ private fun PersonalizedPlaylistSection(
 
         else -> {
             LazyRow(
-                modifier = modifier.fillMaxWidth().overScrollHorizontal(),
+                modifier = modifier
+                    .fillMaxWidth()
+                    .overScrollHorizontal(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(playlists, key = { it.id ?: it.hashCode().toLong() }) { pl ->
@@ -697,7 +764,9 @@ private fun NewSongSection(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            val artist = item.song?.artists?.joinToString(", ") { it.name.orEmpty() }?.takeIf { it.isNotBlank() }
+                            val artist =
+                                item.song?.artists?.joinToString(", ") { it.name.orEmpty() }
+                                    ?.takeIf { it.isNotBlank() }
                             if (!artist.isNullOrBlank()) {
                                 Text(
                                     text = artist,
@@ -815,6 +884,7 @@ private fun formatCount(value: Long): String {
         else -> value.toString()
     }
 }
+
 @ExperimentalFoundationApi
 @UnstableSaltUiApi
 @Composable
@@ -896,7 +966,10 @@ private fun BannerSection(
                     ) {
                         val current = pagerState.currentPage
                         val dotCount = banners.size.coerceAtMost(10)
-                        val start = (current - dotCount / 2).coerceIn(0, (banners.size - dotCount).coerceAtLeast(0))
+                        val start = (current - dotCount / 2).coerceIn(
+                            0,
+                            (banners.size - dotCount).coerceAtLeast(0)
+                        )
                         val endExclusive = (start + dotCount).coerceAtMost(banners.size)
                         for (i in start until endExclusive) {
                             val active = i == current

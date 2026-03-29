@@ -1,18 +1,18 @@
 package com.youyuan.music.compose.ui.screens
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import com.moriafly.salt.ui.SaltTheme
+import com.moriafly.salt.ui.Text
+import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.web.WebView
 import com.moriafly.salt.ui.web.rememberWebViewState
-import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.moriafly.salt.ui.Text
-import com.moriafly.salt.ui.SaltTheme
-import androidx.compose.ui.res.stringResource
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
 import com.youyuan.music.compose.ui.view.ScreenScaffold

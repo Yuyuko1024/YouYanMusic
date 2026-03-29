@@ -5,10 +5,10 @@ import android.app.Activity
 import android.view.Window
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
@@ -62,25 +62,24 @@ import com.moriafly.salt.ui.pager.VerticalPager
 import com.moriafly.salt.ui.pager.rememberPagerState
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.constants.PlayerHorizontalPadding
-import com.youyuan.music.compose.constants.PlayerVerticalPadding
 import com.youyuan.music.compose.pref.AudioQualityLevel
 import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.SettingsDataStore
+import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.uicomponent.ResizableIconButton
 import com.youyuan.music.compose.ui.uicomponent.flowing.FlowingLightCanvasBackground
 import com.youyuan.music.compose.ui.uicomponent.sheet.AudioQualitySheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.MusicFXSheetDialog
+import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
-import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
+import com.youyuan.music.compose.ui.utils.AdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.utils.PlayerForegroundColorLight
-import com.youyuan.music.compose.ui.utils.AdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.getPlayerUIColor
 import com.youyuan.music.compose.ui.utils.getRememberedPlayerUIColor
 import com.youyuan.music.compose.ui.utils.rememberAdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.rememberPlayerUIColor
-import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.utils.Logger
 import com.youyuan.music.compose.utils.SystemMediaDialogUtils
@@ -122,6 +121,7 @@ fun BottomSheetPlayer(
     val isFavorite by playerViewModel.isCurrentSongLiked.collectAsState(initial = false)
     // 封面
     val currentArtworkUrl = playerViewModel.currentAlbumArtUrl.collectAsState().value
+
     // 标题
     fun List<String?>?.toDisplayText(): String? =
         this
@@ -147,7 +147,9 @@ fun BottomSheetPlayer(
     // 设置数据存储
     val settingsDataStore = remember { SettingsDataStore(context) }
     // 播放器进度条波形动画设置项
-    val isPlayerSquigglyWaveEnabled by settingsDataStore.isPlayerSquigglyWaveEnabled.collectAsState(initial = true)
+    val isPlayerSquigglyWaveEnabled by settingsDataStore.isPlayerSquigglyWaveEnabled.collectAsState(
+        initial = true
+    )
     val playerCoverType by settingsDataStore.playerCoverType.collectAsState(initial = PlayerCoverType.DEFAULT.ordinal)
 
     // 播放状态
@@ -210,7 +212,8 @@ fun BottomSheetPlayer(
                     artist = artistName,
                     album = currentSong.al?.name,
                     artworkUrl = currentArtworkUrl,
-                    artists = currentSong.ar.orEmpty().map { SongActionArtist(artistId = it.id, name = it.name) },
+                    artists = currentSong.ar.orEmpty()
+                        .map { SongActionArtist(artistId = it.id, name = it.name) },
                 ),
                 navController = navController,
                 onDismissRequest = { showSongActionDialog = false },
@@ -261,11 +264,13 @@ fun BottomSheetPlayer(
             rememberPlayerUIColor(playerUIColor)
         }
 
-        Logger.debug("BottomSheetPlayer",
+        Logger.debug(
+            "BottomSheetPlayer",
             "状态栏颜色控制: isExpanded=${state.isExpanded}," +
                     " currentPlaying=${currentSong?.name ?: "null"}," +
                     " coverLoaded=$coverLoaded," +
-                    " isSystemInDarkTheme=$isSystemInDarkTheme")
+                    " isSystemInDarkTheme=$isSystemInDarkTheme"
+        )
 
         val window: Window = context.window
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
@@ -392,6 +397,7 @@ fun BottomSheetPlayer(
                                     onShowSongActionDialog = { showSongActionDialog = true },
                                 )
                             }
+
                             1 -> {
                                 PlaylistPager(
                                     playerViewModel = playerViewModel,
@@ -489,7 +495,8 @@ private fun ExpandedPlayerMainPage(
                         )
                     }
                     Icon(
-                        modifier = Modifier.padding(4.dp)
+                        modifier = Modifier
+                            .padding(4.dp)
                             .clickable(onClick = {
                                 SystemMediaDialogUtils.getInstance(context).showSystemMediaDialog()
                             }),
@@ -521,6 +528,7 @@ private fun ExpandedPlayerMainPage(
                                 isPlaying = isPlaying,
                                 coverType = playerCoverType
                             )
+
                             2 -> LyricsPager(playerViewModel = playerViewModel)
                         }
                     }
@@ -583,6 +591,7 @@ private fun ExpandedPlayerMainPage(
                             isPlaying = isPlaying,
                             coverType = playerCoverType
                         )
+
                         2 -> LyricsPager(playerViewModel = playerViewModel)
                     }
                 }
@@ -669,10 +678,11 @@ private fun PlayerControlsSection(
                 .padding(horizontal = 6.dp),
         ) {
             if (isTabletLandscape) {
-                Row(Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.CenterVertically)
-                    .weight(1f)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.CenterVertically)
+                        .weight(1f)
                 ) {
                     AnimatedVisibility(
                         modifier = Modifier
@@ -743,9 +753,11 @@ private fun PlayerControlsSection(
                     IconButton(
                         onClick = {
                             if (currentSongId != null) {
-                                navController.navigate(ScreenRoute.SongComments.createRoute(
-                                    currentSongId
-                                ))
+                                navController.navigate(
+                                    ScreenRoute.SongComments.createRoute(
+                                        currentSongId
+                                    )
+                                )
                             }
                         },
                         modifier = Modifier.padding(4.dp)
@@ -775,7 +787,7 @@ private fun PlayerControlsSection(
             currentPosition = currentPosition,
             duration = duration,
             isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
-            onSliderPositionChange = { onSliderPositionChange(it) } ,
+            onSliderPositionChange = { onSliderPositionChange(it) },
             onSeekTo = { onSeekTo(it) },
             isPlaying = isPlaying
         )
@@ -929,7 +941,9 @@ private fun PlayerDataControlPanel(
     Row(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
     ) {
         Text(
             text = formatTimeString(sliderPosition ?: currentPosition),

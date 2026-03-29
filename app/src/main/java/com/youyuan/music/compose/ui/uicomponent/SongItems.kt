@@ -37,9 +37,9 @@ import coil3.request.crossfade
 import coil3.request.placeholder
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
+import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.SongDetail
-import com.moriafly.salt.ui.UnstableSaltUiApi
 
 @UnstableApi
 @UnstableSaltUiApi
@@ -167,7 +167,9 @@ fun SongItem(
 
 @Composable
 fun SongItemPlaceholder() {
-    Row(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+    Row(modifier = Modifier
+        .fillMaxWidth()
+        .padding(8.dp)) {
         Box(
             modifier = Modifier
                 .size(50.dp)
@@ -176,9 +178,19 @@ fun SongItemPlaceholder() {
         )
         Spacer(modifier = Modifier.width(10.dp))
         Column {
-            Box(modifier = Modifier.width(150.dp).height(16.dp).background(Color.Gray.copy(alpha = 0.3f)))
+            Box(
+                modifier = Modifier
+                    .width(150.dp)
+                    .height(16.dp)
+                    .background(Color.Gray.copy(alpha = 0.3f))
+            )
             Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.width(100.dp).height(12.dp).background(Color.Gray.copy(alpha = 0.3f)))
+            Box(
+                modifier = Modifier
+                    .width(100.dp)
+                    .height(12.dp)
+                    .background(Color.Gray.copy(alpha = 0.3f))
+            )
         }
     }
 }

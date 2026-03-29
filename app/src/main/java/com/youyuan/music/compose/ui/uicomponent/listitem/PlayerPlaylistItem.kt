@@ -35,7 +35,8 @@ fun PlaylistItem(
     onRemoveClick: () -> Unit = {}
 ) {
     val title = song.name ?: stringResource(R.string.unknown_song)
-    val artist = song.ar?.joinToString(", ") { it.name ?: "" } ?: stringResource(R.string.unknown_artist)
+    val artist =
+        song.ar?.joinToString(", ") { it.name ?: "" } ?: stringResource(R.string.unknown_artist)
     val album = song.al?.name ?: stringResource(R.string.unknown_album)
 
     val isCurrentPlaying = currentPlayingIndex == itemIndex

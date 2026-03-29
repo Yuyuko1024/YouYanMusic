@@ -4,20 +4,19 @@ import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -28,31 +27,28 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
 import com.moriafly.salt.ui.ItemButton
 import com.moriafly.salt.ui.ItemOuterTitle
 import com.moriafly.salt.ui.RoundedColumn
+import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
-import com.youyuan.music.compose.ui.uicomponent.AccountHeaderCard
-import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.Alignment
-import coil3.compose.AsyncImage
-import com.moriafly.salt.ui.SaltTheme
-import androidx.compose.ui.res.stringResource
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.UserPlaylistItem
+import com.youyuan.music.compose.ui.uicomponent.AccountHeaderCard
 import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.view.MainTabScaffold
+import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @ExperimentalFoundationApi
@@ -168,7 +164,12 @@ fun ProfileScreen(
                                     )
                                     ItemButton(
                                         text = "重试",
-                                        onClick = { profileViewModel.loadUserPlaylists(isLoggedIn = true, force = true) }
+                                        onClick = {
+                                            profileViewModel.loadUserPlaylists(
+                                                isLoggedIn = true,
+                                                force = true
+                                            )
+                                        }
                                     )
                                 }
                             }
@@ -180,7 +181,11 @@ fun ProfileScreen(
                                 PlaylistCard(
                                     playlist = pl,
                                     onClick = {
-                                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
+                                        navController.navigate(
+                                            ScreenRoute.PlaylistDetail.createRoute(
+                                                pl.id
+                                            )
+                                        )
                                     }
                                 )
                             }
@@ -192,7 +197,11 @@ fun ProfileScreen(
                                 PlaylistCard(
                                     playlist = pl,
                                     onClick = {
-                                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
+                                        navController.navigate(
+                                            ScreenRoute.PlaylistDetail.createRoute(
+                                                pl.id
+                                            )
+                                        )
                                     }
                                 )
                             }
@@ -204,7 +213,11 @@ fun ProfileScreen(
                                 PlaylistCard(
                                     playlist = pl,
                                     onClick = {
-                                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(pl.id))
+                                        navController.navigate(
+                                            ScreenRoute.PlaylistDetail.createRoute(
+                                                pl.id
+                                            )
+                                        )
                                     }
                                 )
                             }

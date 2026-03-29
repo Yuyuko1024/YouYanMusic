@@ -9,5 +9,5 @@ interface LoginApi {
     suspend fun checkLoginStatus(
         @Query("timestamp") timestamp: Long = System.currentTimeMillis(),
         @Query("ua") ua: String = "pc"
-    ) : LoginStatusData
+    ): LoginStatusData
 }

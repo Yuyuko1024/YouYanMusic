@@ -262,7 +262,8 @@ fun <T> PkHorizontalBanner(
             }
         }
     }
-    HorizontalPager(pagerState,
+    HorizontalPager(
+        pagerState,
         pageSize = if (size == 1) PageSize.Fill else PageSize.Fixed(pagerWidth),
         verticalAlignment = verticalAlignment,
         userScrollEnabled = userScrollEnabled,

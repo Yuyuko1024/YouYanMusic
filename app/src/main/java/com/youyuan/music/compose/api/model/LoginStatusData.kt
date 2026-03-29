@@ -17,14 +17,14 @@ data class LoginStatusData(
     fun getActualProfile(): Profile? {
         return data?.profile ?: profile
     }
-    
+
     /**
      * 获取实际的 code，优先从 data 中获取
      */
     fun getActualCode(): Int? {
         return data?.code ?: code
     }
-    
+
     /**
      * 获取实际的 account，优先从 data 中获取
      */

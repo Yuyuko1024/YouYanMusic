@@ -1,8 +1,8 @@
 package com.youyuan.music.compose.utils
 
+import com.youyuan.music.compose.api.model.ArtistDetail
 import com.youyuan.music.compose.api.model.Song
 import com.youyuan.music.compose.api.model.SongDetail
-import com.youyuan.music.compose.api.model.ArtistDetail
 import com.youyuan.music.compose.api.model.SongDetailAlbumData
 
 /**

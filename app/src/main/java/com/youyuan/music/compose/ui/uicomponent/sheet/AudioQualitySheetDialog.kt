@@ -43,7 +43,12 @@ fun AudioQualitySheetDialog(
         modifier = modifier,
         onDismissRequest = onDismissRequest,
     ) { dismiss ->
-        ItemOuterTitle(stringResource(R.string.audio_quality_current_format, selectedLevel.displayName))
+        ItemOuterTitle(
+            stringResource(
+                R.string.audio_quality_current_format,
+                selectedLevel.displayName
+            )
+        )
 
         RoundedColumn {
             if (loading) {
@@ -69,7 +74,10 @@ fun AudioQualitySheetDialog(
                     val isSelected = level == selectedLevel
                     Item(
                         text = if (isSelected) {
-                            stringResource(R.string.audio_quality_item_selected_format, level.displayName)
+                            stringResource(
+                                R.string.audio_quality_item_selected_format,
+                                level.displayName
+                            )
                         } else {
                             level.displayName
                         },

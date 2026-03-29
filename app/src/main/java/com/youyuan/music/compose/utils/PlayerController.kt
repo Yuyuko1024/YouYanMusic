@@ -77,7 +77,10 @@ class PlayerController @Inject constructor(
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             // 当切换到新的媒体项时更新索引
             _currentMediaItemIndex.value = mediaController?.currentMediaItemIndex ?: 0
-            Log.d("MusicController", "MediaItem transition: index=${_currentMediaItemIndex.value}, reason=$reason")
+            Log.d(
+                "MusicController",
+                "MediaItem transition: index=${_currentMediaItemIndex.value}, reason=$reason"
+            )
         }
 
         override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
@@ -95,7 +98,8 @@ class PlayerController @Inject constructor(
     }
 
     init {
-        val sessionToken = SessionToken(context, ComponentName(context, MusicPlaybackService::class.java))
+        val sessionToken =
+            SessionToken(context, ComponentName(context, MusicPlaybackService::class.java))
         mediaControllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
         mediaControllerFuture?.addListener({
             try {

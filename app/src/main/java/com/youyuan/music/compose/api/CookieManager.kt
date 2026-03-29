@@ -3,11 +3,10 @@ package com.youyuan.music.compose.api
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import androidx.core.content.edit
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
-import androidx.core.content.edit
-import kotlin.collections.iterator
 
 class CookieManager(private val context: Context) : CookieJar {
     companion object {
@@ -37,7 +36,7 @@ class CookieManager(private val context: Context) : CookieJar {
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val cookies = mutableListOf<Cookie>()
         val allCookies = sharedPreferences.all
-        
+
         Log.d(TAG, "loadForRequest: url=${url.host}, 总共有 ${allCookies.size} 个存储的 cookie")
 
         for ((key, value) in allCookies) {
@@ -84,7 +83,7 @@ class CookieManager(private val context: Context) : CookieJar {
                 }
             }
         }
-        
+
         Log.d(TAG, "loadForRequest: 返回 ${cookies.size} 个 cookie")
 
         return cookies
@@ -112,7 +111,7 @@ class CookieManager(private val context: Context) : CookieJar {
 
         }
     }
-    
+
     /**
      * 手动保存从响应 body 中返回的 cookie 字符串
      * cookie 字符串格式如: "MUSIC_U=xxx; __csrf=xxx; ..."
@@ -120,37 +119,50 @@ class CookieManager(private val context: Context) : CookieJar {
     fun saveCookieString(host: String, cookieString: String) {
         Log.d(TAG, "saveCookieString: host=$host, cookieString length=${cookieString.length}")
         Log.d(TAG, "saveCookieString: raw=$cookieString")
-        
+
         sharedPreferences.edit {
             // 解析 cookie 字符串
             val cookiePairs = cookieString.split(";")
             for (pair in cookiePairs) {
                 val trimmed = pair.trim()
                 if (trimmed.isEmpty()) continue
-                
+
                 val eqIndex = trimmed.indexOf("=")
                 if (eqIndex > 0) {
                     val name = trimmed.substring(0, eqIndex).trim()
                     val value = trimmed.substring(eqIndex + 1).trim()
-                    
+
                     // 跳过一些属性字段
-                    if (name.lowercase() in listOf("path", "domain", "expires", "max-age", "secure", "httponly", "samesite")) {
+                    if (name.lowercase() in listOf(
+                            "path",
+                            "domain",
+                            "expires",
+                            "max-age",
+                            "secure",
+                            "httponly",
+                            "samesite"
+                        )
+                    ) {
                         continue
                     }
-                    
+
                     val key = "${host}_$name"
                     // 使用简化格式存储，设置一个较长的过期时间
-                    val cookieValue = "$value|$host|/|${System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000}|false|false"
+                    val cookieValue =
+                        "$value|$host|/|${System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000}|false|false"
                     Log.d(TAG, "saveCookieString: 保存 $name")
                     putString(key, cookieValue)
                 }
             }
         }
-        
+
         // 验证保存结果
-        Log.d(TAG, "saveCookieString: 保存后检查 hasCookiesForHost=$host => ${hasCookiesForHost(host)}")
+        Log.d(
+            TAG,
+            "saveCookieString: 保存后检查 hasCookiesForHost=$host => ${hasCookiesForHost(host)}"
+        )
     }
-    
+
     /**
      * 检查是否有指定 host 的 cookie
      */

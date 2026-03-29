@@ -13,6 +13,7 @@ sealed class ScreenRoute(open val route: String) {
 
     object Search : ScreenRoute("search")
     object Settings : ScreenRoute("settings")
+    object DownloadTasks : ScreenRoute("downloadTasks")
     object LoginPage : ScreenRoute("loginPage")
     object RegisterPage : ScreenRoute("registerPage")
 

@@ -1,7 +1,6 @@
 package com.youyuan.music.compose.ui.player
 
 import android.annotation.SuppressLint
-import android.net.Uri
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -85,7 +83,8 @@ fun CoverPager(
                 ) {
                     AcrylicFlipAsyncImage(
                         imageUrl = artworkUrl,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .aspectRatio(1f)
                             .scale(1f),
                         contentDescription = "Cover art",
@@ -94,6 +93,7 @@ fun CoverPager(
                     )
                 }
             }
+
             PlayerCoverType.CIRCLE.ordinal -> {
                 // 圆形封面，模仿黑胶唱片
                 Card(
@@ -102,7 +102,7 @@ fun CoverPager(
                         .aspectRatio(1f)
                         .scale(1f)
                         .padding(16.dp)
-                        .graphicsLayer{
+                        .graphicsLayer {
                             rotationZ = rotation.value
                             cameraDistance = 8 * density
                         },
@@ -127,7 +127,6 @@ fun CoverPager(
                 }
             }
         }
-
 
 
     }

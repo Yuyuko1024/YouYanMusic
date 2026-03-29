@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -33,8 +33,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.palette.graphics.Palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -305,33 +305,35 @@ fun FlowingLightCanvasBackground(
     }
 }
 
-private suspend fun extractPaletteState(bitmap: Bitmap): PaletteState = withContext(Dispatchers.Default) {
-    val palette = Palette.from(bitmap)
-        .resizeBitmapArea(200 * 200)
-        .clearFilters()
-        .generate()
+private suspend fun extractPaletteState(bitmap: Bitmap): PaletteState =
+    withContext(Dispatchers.Default) {
+        val palette = Palette.from(bitmap)
+            .resizeBitmapArea(200 * 200)
+            .clearFilters()
+            .generate()
 
-    val seedColorInt = palette.getVibrantColor(
-        palette.getDominantColor(BLACK)
-    )
-    val seedColor = Color(seedColorInt)
+        val seedColorInt = palette.getVibrantColor(
+            palette.getDominantColor(BLACK)
+        )
+        Color(seedColorInt)
 
-    val seedHsv = FloatArray(3)
-    colorToHSV(seedColorInt, seedHsv)
-    val isLowSaturation = seedHsv[1] < 0.2f
-    val blobColors = buildHarmonicBlobColors(seedHsv, isLowSaturation)
+        val seedHsv = FloatArray(3)
+        colorToHSV(seedColorInt, seedHsv)
+        val isLowSaturation = seedHsv[1] < 0.2f
+        val blobColors = buildHarmonicBlobColors(seedHsv, isLowSaturation)
 
-    val darkBase = palette.darkMutedSwatch?.rgb?.let(::Color)
-        ?: palette.dominantSwatch?.rgb?.let(::Color)
-        ?: Color.Black
+        val darkBase = palette.darkMutedSwatch?.rgb?.let(::Color)
+            ?: palette.dominantSwatch?.rgb?.let(::Color)
+            ?: Color.Black
 
-    val backgroundColor = if (isLowSaturation) Color(0xFF121212) else applyDarkBackgroundFilter(darkBase)
+        val backgroundColor =
+            if (isLowSaturation) Color(0xFF121212) else applyDarkBackgroundFilter(darkBase)
 
-    PaletteState(
-        blobColors = blobColors,
-        backgroundColor = backgroundColor,
-    )
-}
+        PaletteState(
+            blobColors = blobColors,
+            backgroundColor = backgroundColor,
+        )
+    }
 
 private fun buildHarmonicBlobColors(seedHsv: FloatArray, isLowSaturation: Boolean): List<Color> {
     if (isLowSaturation) {

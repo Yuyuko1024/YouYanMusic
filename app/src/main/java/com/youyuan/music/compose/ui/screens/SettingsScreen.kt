@@ -1,6 +1,7 @@
 package com.youyuan.music.compose.ui.screens
 
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,9 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import android.widget.Toast
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.scrollable
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemOuterTitle
@@ -32,6 +30,7 @@ import com.moriafly.salt.ui.popup.rememberPopupState
 import com.moriafly.salt.ui.rememberScrollState
 import com.moriafly.salt.ui.verticalScroll
 import com.youyuan.music.compose.R
+import com.youyuan.music.compose.pref.AudioQualityLevel
 import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
@@ -54,11 +53,17 @@ fun SettingsScreen(
 
     val settingsDataStore = remember { SettingsDataStore(context) }
     val isAppDynamicColorEnabled by settingsDataStore.appDynamicColorEnabled.collectAsState(initial = false)
-    val isPlayerSquigglyWaveEnabled by settingsDataStore.isPlayerSquigglyWaveEnabled.collectAsState(initial = true)
+    val isPlayerSquigglyWaveEnabled by settingsDataStore.isPlayerSquigglyWaveEnabled.collectAsState(
+        initial = true
+    )
     val isNewYearThemeEnabled by settingsDataStore.newYearThemeEnabled.collectAsState(initial = true)
-    val isNewYearFireworksEnabled by settingsDataStore.newYearFireworksEnabled.collectAsState(initial = true)
+    val isNewYearFireworksEnabled by settingsDataStore.newYearFireworksEnabled.collectAsState(
+        initial = true
+    )
     val playerCoverType by settingsDataStore.playerCoverType
         .collectAsState(initial = PlayerCoverType.DEFAULT.ordinal)
+    val downloadAudioQualityLevel by settingsDataStore.downloadAudioQualityLevel
+        .collectAsState(initial = AudioQualityLevel.default().level)
     val isNewYearFestivalDay = remember { LunarNewYearUtils.isNewYearFestivalDay() }
 
     val effectiveApiUrl by appConfigViewModel.effectiveApiUrl.collectAsState()
@@ -75,6 +80,9 @@ fun SettingsScreen(
         stringResource(R.string.settings_action_previous),
         stringResource(R.string.settings_action_restart)
     )
+    val audioQualityLevels = AudioQualityLevel.entries
+    val downloadQualityLabel = AudioQualityLevel.fromLevel(downloadAudioQualityLevel)?.displayName
+        ?: AudioQualityLevel.default().displayName
 
     ScreenScaffold(
         modifier = modifier,
@@ -93,8 +101,10 @@ fun SettingsScreen(
         ) {
             val scrollState = rememberScrollState()
             Column(
-                Modifier.fillMaxSize().overScrollVertical()
-                .verticalScroll(scrollState)
+                Modifier
+                    .fillMaxSize()
+                    .overScrollVertical()
+                    .verticalScroll(scrollState)
             ) {
                 val popupState = rememberPopupState()
                 val isAndroid12OrAbove = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -168,6 +178,7 @@ fun SettingsScreen(
                 ItemOuterTitle(text = stringResource(R.string.settings_player_behavior))
                 RoundedColumn {
                     val popupState = rememberPopupState()
+                    val downloadQualityPopupState = rememberPopupState()
                     // 上一曲行为的设置
                     val currentAction by settingsDataStore.playerSeekToPreviousAction
                         .collectAsState(initial = PlayerSeekToPreviousAction.DEFAULT.ordinal)
@@ -188,6 +199,25 @@ fun SettingsScreen(
                                         )
                                     }
                                     popupState.dismiss()
+                                }
+                            )
+                        }
+                    }
+
+                    ItemPopup(
+                        state = downloadQualityPopupState,
+                        text = stringResource(R.string.settings_download_quality),
+                        sub = downloadQualityLabel,
+                    ) {
+                        audioQualityLevels.forEach { quality ->
+                            PopupMenuItem(
+                                text = quality.displayName,
+                                selected = quality.level == downloadAudioQualityLevel,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        settingsDataStore.setDownloadAudioQualityLevel(quality.level)
+                                    }
+                                    downloadQualityPopupState.dismiss()
                                 }
                             )
                         }

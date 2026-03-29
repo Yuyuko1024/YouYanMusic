@@ -11,22 +11,19 @@ import com.youyuan.music.compose.api.apis.PlaylistApi
 import com.youyuan.music.compose.api.apis.SongApi
 import com.youyuan.music.compose.api.model.PlaylistDetail
 import com.youyuan.music.compose.api.model.SongDetail
-import com.youyuan.music.compose.data.PlaylistInvalidationBus
 import com.youyuan.music.compose.data.PlaylistDetailCache
+import com.youyuan.music.compose.data.PlaylistInvalidationBus
 import com.youyuan.music.compose.data.PlaylistTrackDiff
 import com.youyuan.music.compose.data.SongDetailPool
 import com.youyuan.music.compose.paging.SongIdsPagingSource
 import com.youyuan.music.compose.utils.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
 @HiltViewModel
@@ -112,7 +109,8 @@ class PlaylistDetailViewModel @Inject constructor(
                     val newSet = ids.toHashSet()
                     val added = ids.filter { it !in oldSet }
                     val removed = oldIds.filter { it !in newSet }
-                    _trackDiff.value = PlaylistTrackDiff(addedSongIds = added, removedSongIds = removed)
+                    _trackDiff.value =
+                        PlaylistTrackDiff(addedSongIds = added, removedSongIds = removed)
                 }
 
                 if (ids.isEmpty()) {

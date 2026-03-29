@@ -5,11 +5,11 @@ import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.DrawerValue
@@ -49,7 +48,6 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavHostController
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -68,16 +66,16 @@ import com.youyuan.music.compose.ui.player.rememberBottomSheetState
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.screens.navigationBuilder
 import com.youyuan.music.compose.ui.uicomponent.AdaptiveDrawerContainer
+import com.youyuan.music.compose.ui.uicomponent.AppDrawer
 import com.youyuan.music.compose.ui.uicomponent.NewYearFireworksOverlay
 import com.youyuan.music.compose.ui.utils.AdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.LocalPlayerAwareWindowInsets
 import com.youyuan.music.compose.ui.utils.rememberAdaptiveLayoutMode
 import com.youyuan.music.compose.ui.viewmodel.AppConfigViewModel
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
+import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
 import kotlinx.coroutines.launch
-import com.youyuan.music.compose.ui.uicomponent.AppDrawer
-import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
 
 @OptIn(UnstableApi::class)
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -147,7 +145,7 @@ fun RootView(
         playerViewModel.consumeError()
     }
 
-    BoxWithConstraints (
+    BoxWithConstraints(
         modifier = modifier
             .background(SaltTheme.colors.background)
             .fillMaxSize()
@@ -200,8 +198,8 @@ fun RootView(
             var bottom = bottomInset + MiniPlayerHeight
             if (shouldShowNavigationBar) bottom += NavigationBarHeight
             windowsInsets
-            .only(WindowInsetsSides.Horizontal)
-            .add(WindowInsets(bottom = bottom))
+                .only(WindowInsetsSides.Horizontal)
+                .add(WindowInsets(bottom = bottom))
         }
 
         // 记录当前的主屏幕路由，默认为 Explore

@@ -16,12 +16,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.geometry.Size
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -81,7 +81,8 @@ fun TiltedPhotoWall(
             val itemSizeDp = with(density) { itemSizePx.toDp() }
 
             // 计算旋转后需要覆盖的区域
-            val diagonal = sqrt(parentSize.width * parentSize.width + parentSize.height * parentSize.height)
+            val diagonal =
+                sqrt(parentSize.width * parentSize.width + parentSize.height * parentSize.height)
             val expandedSize = diagonal * 1.5f
 
             // 计算当前视口需要显示的网格范围

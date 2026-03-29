@@ -37,7 +37,8 @@ fun ResizableIconButton(
                     interactionSource = remember { MutableInteractionSource() },
                     enabled = enabled,
                     onClick = onClick,
-                ).alpha(if (enabled) 1f else 0.5f)
+                )
+                .alpha(if (enabled) 1f else 0.5f)
                 .then(modifier),
     )
 }
@@ -62,7 +63,8 @@ fun ResizableIconButton(
                     interactionSource = remember { MutableInteractionSource() },
                     enabled = enabled,
                     onClick = onClick,
-                ).alpha(if (enabled) 1f else 0.5f)
+                )
+                .alpha(if (enabled) 1f else 0.5f)
                 .then(modifier),
     )
 }

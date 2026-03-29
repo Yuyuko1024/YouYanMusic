@@ -1,6 +1,5 @@
 package com.youyuan.music.compose.ui.uicomponent
 
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DismissibleDrawerSheet
@@ -13,10 +12,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.moriafly.salt.ui.Item
 import com.moriafly.salt.ui.ItemArrowType
@@ -26,10 +24,10 @@ import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import compose.icons.TablerIcons
+import compose.icons.tablericons.Download
 import compose.icons.tablericons.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlin.collections.listOf
 
 // 抽取菜单项数据类
 data class DrawerMenuItem(
@@ -55,18 +53,25 @@ fun AppDrawer(
 
     val drawerHome = stringResource(R.string.drawer_home)
     val drawerSettings = stringResource(R.string.drawer_settings)
+    val drawerDownloadTasks = stringResource(R.string.drawer_download_tasks)
     val titleExplore = stringResource(R.string.title_explore)
     val titleProfile = stringResource(R.string.title_profile)
 
     val settingsIcon = rememberVectorPainter(TablerIcons.Settings)
+    val downloadIcon = rememberVectorPainter(TablerIcons.Download)
 
-    val drawerMenuItems = remember(drawerHome, drawerSettings) {
+    val drawerMenuItems = remember(drawerHome, drawerSettings, drawerDownloadTasks) {
         listOf(
             DrawerMenuItem(
                 title = drawerHome,
                 iconResId = R.drawable.ic_explore,
                 route = "",
                 isMainScreen = true,
+            ),
+            DrawerMenuItem(
+                title = drawerDownloadTasks,
+                iconPainter = downloadIcon,
+                route = ScreenRoute.DownloadTasks.route,
             ),
             DrawerMenuItem(
                 title = drawerSettings,
@@ -101,8 +106,13 @@ fun AppDrawer(
         }
     }
 
-    val tabletSecondaryMenuItems = remember(drawerSettings) {
+    val tabletSecondaryMenuItems = remember(drawerSettings, drawerDownloadTasks) {
         listOf(
+            DrawerMenuItem(
+                title = drawerDownloadTasks,
+                iconPainter = downloadIcon,
+                route = ScreenRoute.DownloadTasks.route,
+            ),
             DrawerMenuItem(
                 title = drawerSettings,
                 iconPainter = settingsIcon,
@@ -195,7 +205,7 @@ private fun DrawerItemComponent(
         text = menuItem.title,
         iconPainter = resolvedPainter,
         textColor = SaltTheme.colors.text,
-        arrowType= ItemArrowType.None
+        arrowType = ItemArrowType.None
     )
 }
 

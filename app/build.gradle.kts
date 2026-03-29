@@ -156,6 +156,12 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.compose)
 
+    // WorkManager (download tasks)
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Audio metadata writing (mp3/flac tags)
+    implementation("net.jthink:jaudiotagger:3.0.1")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

@@ -54,25 +54,25 @@ fun MusicFXSheetDialog(
         RoundedColumn {
             ItemSlider(
                 text = stringResource(R.string.playback_speed),
-                value = playbackSpeed?:1.0f,
+                value = playbackSpeed ?: 1.0f,
                 valueRange = 0.2f..2.0f,
                 steps = 35,
-                onValueChange = { 
+                onValueChange = {
                     // 舍入到最接近的 0.05 的倍数
                     val roundedValue = (it * 20).toInt() / 20f
                     playerViewModel.setPlayerSpeed(roundedValue)
-                 },
+                },
                 sub = String.format("%.2fx", playbackSpeed)
             )
             ItemSlider(
                 text = stringResource(R.string.pitch_adjustment),
-                value = pitch?:1.0f,
+                value = pitch ?: 1.0f,
                 valueRange = 0.1f..2.0f,
                 steps = 18,
-                onValueChange = { 
+                onValueChange = {
                     val roundedValue = (it * 10).toInt() / 10f
                     playerViewModel.setPlayerPitch(roundedValue)
-                 },
+                },
                 sub = String.format("%.2f", pitch)
             )
         }

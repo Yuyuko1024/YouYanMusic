@@ -9,5 +9,5 @@ interface SongUrlApi {
     suspend fun getSongUrl(
         @Query("id") songIds: String,
         @Query("level") qualityLevel: String = "standard"
-    ) : SongUrlResponse
+    ): SongUrlResponse
 }

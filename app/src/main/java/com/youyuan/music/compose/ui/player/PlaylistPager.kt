@@ -54,8 +54,8 @@ import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.constants.PlayerCoverVerticalPadding
 import com.youyuan.music.compose.constants.PlayerHorizontalPadding
-import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.uicomponent.listitem.PlaylistItem
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 
@@ -129,7 +129,8 @@ fun PlaylistPager(
                     style = SaltTheme.textStyles.sub,
                     fontSize = 12.sp,
                     color = uiColor,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
                         .fillMaxWidth()
                 )
             }
@@ -201,7 +202,10 @@ fun PlaylistPager(
                 startIndent = 0.dp
             )
             LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f).overScrollVertical(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f)
+                    .overScrollVertical(),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 state = listState,
             ) {

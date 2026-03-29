@@ -9,5 +9,5 @@ interface LyricsApi {
     @GET("/lyric")
     suspend fun getLyricById(
         @Query("id") id: Long
-    ) : LyricsData
+    ): LyricsData
 }

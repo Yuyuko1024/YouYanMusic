@@ -35,6 +35,7 @@ class SystemMediaDialogUtils private constructor(private val context: Activity) 
                 )
                 startIntent(intent)
             }
+
             "samsung" -> {
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 intent.setClassName(
@@ -43,24 +44,31 @@ class SystemMediaDialogUtils private constructor(private val context: Activity) 
                 )
                 startIntent(intent)
             }
+
             else -> {
                 when {
                     Build.VERSION.SDK_INT >= VERSION_CODES.UPSIDE_DOWN_CAKE -> {
                         startNativeMediaDialogForU()
                     }
+
                     Build.VERSION.SDK_INT >= VERSION_CODES.S -> {
                         intent.setPackage("com.android.systemui")
                         intent.action = "com.android.systemui.action.LAUNCH_MEDIA_OUTPUT_DIALOG"
                         intent.putExtra("package_name", context.packageName)
                         context.sendBroadcast(intent)
                     }
+
                     Build.VERSION.SDK_INT == VERSION_CODES.R -> {
                         startNativeMediaDialogForR()
                     }
+
                     else -> {
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         intent.action = "com.android.settings.panel.action.MEDIA_OUTPUT"
-                        intent.putExtra("com.android.settings.panel.extra.PACKAGE_NAME", context.packageName)
+                        intent.putExtra(
+                            "com.android.settings.panel.extra.PACKAGE_NAME",
+                            context.packageName
+                        )
                         startIntent(intent)
                     }
                 }

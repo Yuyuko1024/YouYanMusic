@@ -7,9 +7,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,8 +40,8 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
-import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.uicomponent.SearchTopAppBar
+import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.ui.viewmodel.SearchViewModel
@@ -81,68 +81,71 @@ fun SearchScreen(
                 .padding(padding)
         ) {
             Column(Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            // 什么都不做时显示的默认内容
-            AnimatedVisibility(
-                visible = !isLoading && searchResults.isEmpty() && searchSuggestions.isEmpty(),
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                // 什么都不做时显示的默认内容
+                AnimatedVisibility(
+                    visible = !isLoading && searchResults.isEmpty() && searchSuggestions.isEmpty(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.no_item),
-                            contentDescription = stringResource(R.string.cd_search),
-                            modifier = Modifier.size(200.dp)
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.no_item),
+                                contentDescription = stringResource(R.string.cd_search),
+                                modifier = Modifier.size(200.dp)
+                            )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text = stringResource(R.string.search_hint),
-                            style = SaltTheme.textStyles.main,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
+                            Text(
+                                text = stringResource(R.string.search_hint),
+                                style = SaltTheme.textStyles.main,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
 
-                        Text(
-                            text = stringResource(R.string.search_description),
-                            style = SaltTheme.textStyles.sub
-                        )
+                            Text(
+                                text = stringResource(R.string.search_description),
+                                style = SaltTheme.textStyles.sub
+                            )
+                        }
                     }
                 }
-            }
 
-            // 搜索结果列表
-            AnimatedVisibility(
-                visible = searchResults.isNotEmpty(),
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize().overScrollVertical()
+                // 搜索结果列表
+                AnimatedVisibility(
+                    visible = searchResults.isNotEmpty(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
                 ) {
-                    items(
-                        items = searchResults,
-                        key = { it.id.toString() }
-                    ) { result ->
-                        SearchResultItem(
-                            title = result.name ?: stringResource(R.string.unknown_song),
-                            subtitle = result.artists?.joinToString(", ") { it.name ?: "" } ?: stringResource(R.string.unknown_artist),
-                            onClick = {
-                                playerViewModel.playSong(result)
-                            }
-                        )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .overScrollVertical()
+                    ) {
+                        items(
+                            items = searchResults,
+                            key = { it.id.toString() }
+                        ) { result ->
+                            SearchResultItem(
+                                title = result.name ?: stringResource(R.string.unknown_song),
+                                subtitle = result.artists?.joinToString(", ") { it.name ?: "" }
+                                    ?: stringResource(R.string.unknown_artist),
+                                onClick = {
+                                    playerViewModel.playSong(result)
+                                }
+                            )
+                        }
                     }
                 }
             }
-        }
 
             // 搜索建议列表
             AnimatedVisibility(
@@ -175,14 +178,19 @@ fun SearchScreen(
                                 }
                         ) {
                             LazyColumn(
-                                modifier = Modifier.fillMaxSize().overScrollVertical()
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .overScrollVertical()
                             ) {
                                 item {
                                     Text(
                                         text = stringResource(R.string.search_suggestions),
                                         style = SaltTheme.textStyles.main,
                                         fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                        modifier = Modifier.padding(
+                                            horizontal = 16.dp,
+                                            vertical = 12.dp
+                                        )
                                     )
                                 }
 

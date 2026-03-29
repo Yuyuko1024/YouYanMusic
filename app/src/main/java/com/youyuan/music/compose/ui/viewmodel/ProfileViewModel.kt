@@ -9,7 +9,6 @@ import com.youyuan.music.compose.api.apis.LoginApi
 import com.youyuan.music.compose.api.apis.ProfileApi
 import com.youyuan.music.compose.api.apis.QrCodeLoginApi
 import com.youyuan.music.compose.api.apis.SmsLoginApi
-import com.youyuan.music.compose.api.model.CaptchaResponse
 import com.youyuan.music.compose.api.model.Profile
 import com.youyuan.music.compose.api.model.UserPlaylistItem
 import com.youyuan.music.compose.data.PlaylistDetailCache
@@ -220,6 +219,7 @@ class ProfileViewModel @Inject constructor(
                             _error.value = "二维码已过期，请重新获取"
                             break
                         }
+
                         QR_STATUS_SUCCESS -> {
                             // 登录成功
                             val cookie = statusResponse.cookie
@@ -347,6 +347,7 @@ class ProfileViewModel @Inject constructor(
                     changed = true
                     changedPlaylistIds += newItem.id
                 }
+
                 oldItem == newItem -> merged += oldItem
                 else -> {
                     merged += newItem

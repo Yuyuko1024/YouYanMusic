@@ -17,10 +17,10 @@ fun rememberAdaptiveLayoutMode(maxWidth: Dp): AdaptiveLayoutMode {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isTabletLikeLandscape = isLandscape && (
-        configuration.smallestScreenWidthDp >= 600 ||
-            configuration.screenWidthDp >= 840 ||
-            maxWidth >= 840.dp
-        )
+            configuration.smallestScreenWidthDp >= 600 ||
+                    configuration.screenWidthDp >= 840 ||
+                    maxWidth >= 840.dp
+            )
 
     return remember(
         configuration.orientation,

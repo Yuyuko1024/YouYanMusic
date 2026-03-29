@@ -54,7 +54,8 @@ fun BottomSheet(
                     .roundToPx()
                     .coerceAtLeast(0) // 确保偏移量不为负数
                 IntOffset(x = 0, y = y)
-            }.pointerInput(state) {
+            }
+            .pointerInput(state) {
                 // 创建手势速度跟踪器，用于计算拖拽手势的速度
                 val velocityTracker = VelocityTracker()
 
@@ -89,7 +90,8 @@ fun BottomSheet(
                         state.performFling(velocity)
                     },
                 )
-            }.background(SaltTheme.colors.subBackground) // 设置背景色,
+            }
+            .background(SaltTheme.colors.subBackground) // 设置背景色,
     ) {
         // 展开状态下的内容显示
         if (!state.isCollapsed) {
@@ -118,13 +120,15 @@ fun BottomSheet(
                             // 根据展开进度计算透明度，实现渐隐效果
                             // 面板展开时折叠内容逐渐变透明
                             alpha = 1f - (state.progress * 4).coerceAtMost(1f)
-                        }.clickable(
+                        }
+                        .clickable(
                             // 设置无波纹效果的点击交互
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             // 点击时执行软展开操作
                             onClick = state::expandSoft,
-                        ).fillMaxWidth()
+                        )
+                        .fillMaxWidth()
                         // 设置折叠状态的高度
                         .height(state.collapsedBound),
                 content = collapsedContent,

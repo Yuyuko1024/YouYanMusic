@@ -9,34 +9,34 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object PlayerPlaylistManager {
-    
+
     data class PlaylistItem(
         val song: SongDetail,
         val playUrl: String?,
         val albumArtUrl: String?
     )
-    
+
     private val _playlist = MutableStateFlow<List<PlaylistItem>>(emptyList())
     val playlist: StateFlow<List<PlaylistItem>> = _playlist.asStateFlow()
-    
+
     private val _currentIndex = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
-    
+
     fun clearPlaylist() {
         _playlist.value = emptyList()
         _currentIndex.value = 0
     }
-    
+
     fun containsSong(songId: Long?): Boolean {
         if (songId == null) return false
         return _playlist.value.any { it.song.id == songId }
     }
-    
+
     fun findSongIndex(songId: Long?): Int {
         if (songId == null) return -1
         return _playlist.value.indexOfFirst { it.song.id == songId }
     }
-    
+
     fun addItem(song: SongDetail, playUrl: String?, albumArtUrl: String?) {
         if (containsSong(song.id)) return
         val newItem = PlaylistItem(song, playUrl, albumArtUrl)
@@ -71,13 +71,13 @@ object PlayerPlaylistManager {
             }
         }
     }
-    
+
     fun removeItemAt(index: Int) {
         val currentList = _playlist.value.toMutableList()
         if (index in currentList.indices) {
             currentList.removeAt(index)
             _playlist.value = currentList
-            
+
             val currentIdx = _currentIndex.value
             if (index < currentIdx) {
                 _currentIndex.value = currentIdx - 1
@@ -86,7 +86,7 @@ object PlayerPlaylistManager {
             }
         }
     }
-    
+
     fun setPlaylist(items: List<PlaylistItem>) {
         _playlist.value = items
         _currentIndex.value = 0
@@ -99,19 +99,19 @@ object PlayerPlaylistManager {
         currentList[idx] = currentList[idx].copy(playUrl = playUrl)
         _playlist.value = currentList
     }
-    
+
     fun setCurrentIndex(index: Int) {
         if (index in _playlist.value.indices) {
             _currentIndex.value = index
         }
     }
-    
+
     fun getCurrentItem(): PlaylistItem? {
         val index = _currentIndex.value
         val list = _playlist.value
         return if (index in list.indices) list[index] else null
     }
-    
+
     fun PlaylistItem.toMediaItem(): MediaItem {
         val builder = MediaItem.Builder()
             .setMediaId(song.id.toString())
@@ -133,11 +133,11 @@ object PlayerPlaylistManager {
             )
             .build()
     }
-    
+
     fun toMediaItems(): List<MediaItem> {
         return _playlist.value.map { it.toMediaItem() }
     }
-    
+
     fun buildMediaItem(song: SongDetail, playUrl: String?, albumArtUrl: String?): MediaItem {
         val builder = MediaItem.Builder()
             .setMediaId(song.id.toString())

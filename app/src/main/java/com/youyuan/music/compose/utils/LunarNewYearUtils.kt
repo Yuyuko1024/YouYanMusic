@@ -51,7 +51,10 @@ object LunarNewYearUtils {
         return getNewYearDay(currentTimeMillis, timeZone) != NewYearDay.NONE
     }
 
-    private fun chineseCalendarAt(currentTimeMillis: Long, timeZone: JavaTimeZone): ChineseCalendar {
+    private fun chineseCalendarAt(
+        currentTimeMillis: Long,
+        timeZone: JavaTimeZone
+    ): ChineseCalendar {
         val icuTimeZone = TimeZone.getTimeZone(timeZone.id)
         return ChineseCalendar(icuTimeZone, Locale.CHINA).apply {
             timeInMillis = currentTimeMillis

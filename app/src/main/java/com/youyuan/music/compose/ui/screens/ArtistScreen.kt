@@ -5,9 +5,9 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,7 +25,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,9 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -123,7 +122,8 @@ fun ArtistScreen(
                     artist = s.ar?.joinToString(", ") { it.name.orEmpty() }?.ifBlank { null },
                     album = s.al?.name,
                     artworkUrl = s.al?.picUrl,
-                    artists = s.ar.orEmpty().map { SongActionArtist(artistId = it.id, name = it.name) },
+                    artists = s.ar.orEmpty()
+                        .map { SongActionArtist(artistId = it.id, name = it.name) },
                 ),
                 navController = navController,
                 onDismissRequest = {
@@ -146,236 +146,263 @@ fun ArtistScreen(
             )
         },
     ) { padding ->
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-    ) {
-        val coverUrl = artist?.cover ?: artist?.avatar
-        if (!coverUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(coverUrl)
-                    .crossfade(true)
-                    .placeholder(R.drawable.ic_artist_24px)
-                    .build(),
-                contentDescription = artist?.name ?: "artist",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(16.dp),
-                alpha = 0.25f
-            )
-        }
-
-        when {
-            loading && artist == null -> {
-                Text(
-                    text = "加载中...",
-                    style = SaltTheme.textStyles.sub,
-                    color = SaltTheme.colors.subText,
-                    modifier = Modifier.align(Alignment.Center)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            val coverUrl = artist?.cover ?: artist?.avatar
+            if (!coverUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(coverUrl)
+                        .crossfade(true)
+                        .placeholder(R.drawable.ic_artist_24px)
+                        .build(),
+                    contentDescription = artist?.name ?: "artist",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .blur(16.dp),
+                    alpha = 0.25f
                 )
             }
 
-            !error.isNullOrBlank() && artist == null -> {
-                Text(
-                    text = error ?: "加载失败",
-                    style = SaltTheme.textStyles.sub,
-                    color = SaltTheme.colors.subText,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-
-            else -> {
-                val pagerState = rememberPagerState(pageCount = { 2 }, initialPage = 0)
-                val scope = rememberCoroutineScope()
-
-                val songsListState = rememberLazyListState()
-                val albumsListState = rememberLazyListState()
-
-                val density = LocalDensity.current
-                val maxExpandedHeaderHeight = 210.dp
-                // 56dp is a bit tight for avatar + text + padding; bump to avoid top clipping.
-                val collapsedHeaderHeight = 64.dp
-
-                var measuredExpandedHeaderHeightPx by remember(artistId) { mutableStateOf(0) }
-
-                // Offstage measurement: get the natural height of the expanded header content.
-                MeasureExpandedHeaderHeight(
-                    artist = artist,
-                    onMeasuredHeightPx = { h ->
-                        if (h > 0 && h != measuredExpandedHeaderHeightPx) {
-                            measuredExpandedHeaderHeightPx = h
-                        }
-                    }
-                )
-
-                val measuredExpandedHeaderHeightDp = remember(measuredExpandedHeaderHeightPx, density) {
-                    if (measuredExpandedHeaderHeightPx <= 0) null
-                    else with(density) { measuredExpandedHeaderHeightPx.toDp() }
+            when {
+                loading && artist == null -> {
+                    Text(
+                        text = "加载中...",
+                        style = SaltTheme.textStyles.sub,
+                        color = SaltTheme.colors.subText,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
 
-                val expandedHeaderHeight = (measuredExpandedHeaderHeightDp ?: maxExpandedHeaderHeight)
-                    .coerceAtMost(maxExpandedHeaderHeight)
-                    .coerceAtLeast(collapsedHeaderHeight)
-
-                val collapseRangePx = remember(density, expandedHeaderHeight, collapsedHeaderHeight) {
-                    with(density) { (expandedHeaderHeight - collapsedHeaderHeight).toPx() }
+                !error.isNullOrBlank() && artist == null -> {
+                    Text(
+                        text = error ?: "加载失败",
+                        style = SaltTheme.textStyles.sub,
+                        color = SaltTheme.colors.subText,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
 
-                val collapseFraction by remember {
-                    derivedStateOf {
-                        val listState = if (pagerState.currentPage == 0) {
-                            songsListState
-                        } else {
-                            albumsListState
-                        }
-                        val rawScrollPx = if (listState.firstVisibleItemIndex > 0) {
-                            collapseRangePx
-                        } else {
-                            listState.firstVisibleItemScrollOffset.toFloat()
-                        }
-                        if (collapseRangePx <= 0f) 1f else (rawScrollPx / collapseRangePx).coerceIn(0f, 1f)
-                    }
-                }
+                else -> {
+                    val pagerState = rememberPagerState(pageCount = { 2 }, initialPage = 0)
+                    val scope = rememberCoroutineScope()
 
-                val headerHeight by animateDpAsState(
-                    targetValue = lerp(expandedHeaderHeight, collapsedHeaderHeight, collapseFraction),
-                    label = "artistHeaderHeight"
-                )
+                    val songsListState = rememberLazyListState()
+                    val albumsListState = rememberLazyListState()
 
-                Column(modifier = Modifier.fillMaxSize()) {
-                    CollapsingArtistHeader(
+                    val density = LocalDensity.current
+                    val maxExpandedHeaderHeight = 210.dp
+                    // 56dp is a bit tight for avatar + text + padding; bump to avoid top clipping.
+                    val collapsedHeaderHeight = 64.dp
+
+                    var measuredExpandedHeaderHeightPx by remember(artistId) { mutableStateOf(0) }
+
+                    // Offstage measurement: get the natural height of the expanded header content.
+                    MeasureExpandedHeaderHeight(
                         artist = artist,
-                        height = headerHeight,
-                        collapseFraction = collapseFraction,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp)
+                        onMeasuredHeightPx = { h ->
+                            if (h > 0 && h != measuredExpandedHeaderHeightPx) {
+                                measuredExpandedHeaderHeightPx = h
+                            }
+                        }
                     )
 
-                    SecondaryTabRow(
-                        selectedTabIndex = pagerState.currentPage,
-                        containerColor = SaltTheme.colors.background.copy(alpha = 0f),
-                        contentColor = SaltTheme.colors.text,
-                        indicator = {
-                            SecondaryIndicator(
-                                modifier = Modifier.tabIndicatorOffset(pagerState.currentPage),
-                                color = SaltTheme.colors.highlight
+                    val measuredExpandedHeaderHeightDp =
+                        remember(measuredExpandedHeaderHeightPx, density) {
+                            if (measuredExpandedHeaderHeightPx <= 0) null
+                            else with(density) { measuredExpandedHeaderHeightPx.toDp() }
+                        }
+
+                    val expandedHeaderHeight =
+                        (measuredExpandedHeaderHeightDp ?: maxExpandedHeaderHeight)
+                            .coerceAtMost(maxExpandedHeaderHeight)
+                            .coerceAtLeast(collapsedHeaderHeight)
+
+                    val collapseRangePx =
+                        remember(density, expandedHeaderHeight, collapsedHeaderHeight) {
+                            with(density) { (expandedHeaderHeight - collapsedHeaderHeight).toPx() }
+                        }
+
+                    val collapseFraction by remember {
+                        derivedStateOf {
+                            val listState = if (pagerState.currentPage == 0) {
+                                songsListState
+                            } else {
+                                albumsListState
+                            }
+                            val rawScrollPx = if (listState.firstVisibleItemIndex > 0) {
+                                collapseRangePx
+                            } else {
+                                listState.firstVisibleItemScrollOffset.toFloat()
+                            }
+                            if (collapseRangePx <= 0f) 1f else (rawScrollPx / collapseRangePx).coerceIn(
+                                0f,
+                                1f
                             )
                         }
-                    ) {
-                        Tab(
-                            selected = pagerState.currentPage == 0,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                            text = {
-                                Text(
-                                    text = stringResource(R.string.artist_hot_songs),
-                                    style = SaltTheme.textStyles.sub,
-                                    color = SaltTheme.colors.text,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        )
-                        Tab(
-                            selected = pagerState.currentPage == 1,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
-                            text = {
-                                Text(
-                                    text = stringResource(R.string.artist_albums),
-                                    style = SaltTheme.textStyles.sub,
-                                    color = SaltTheme.colors.text,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        )
                     }
 
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize(),
-                    ) { page ->
-                        when (page) {
-                            0 -> {
-                                LazyColumn(
-                                    state = songsListState,
-                                    modifier = Modifier.fillMaxSize().overScrollVertical(),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    if (topSongs.isEmpty()) {
-                                        item {
-                                            Text(
-                                                text = stringResource(R.string.artist_no_songs),
-                                                style = SaltTheme.textStyles.sub,
-                                                color = SaltTheme.colors.subText,
-                                                modifier = Modifier.padding(vertical = 16.dp, horizontal = 12.dp)
-                                            )
-                                        }
-                                    } else {
-                                        items(
-                                            count = topSongs.size,
-                                            key = { index -> topSongs[index].id }
-                                        ) { index ->
-                                            val song = topSongs.getOrNull(index)
-                                            if (song != null) {
-                                                SongItem(
-                                                    song = song,
-                                                    onMoreClick = {
-                                                        selectedSongForAction = it
-                                                        showSongActionDialog = true
-                                                    },
-                                                    onClick = { songId ->
-                                                        playerViewModel.playTargetSongWithPlaylistSmart(
-                                                            targetSongId = songId,
-                                                            allSongIds = topSongs.map { it.id },
-                                                        )
-                                                    }
-                                                )
-                                            } else {
-                                                SongItemPlaceholder()
-                                            }
-                                        }
-                                    }
+                    val headerHeight by animateDpAsState(
+                        targetValue = lerp(
+                            expandedHeaderHeight,
+                            collapsedHeaderHeight,
+                            collapseFraction
+                        ),
+                        label = "artistHeaderHeight"
+                    )
 
-                                    item { Spacer(modifier = Modifier.height(12.dp)) }
-                                }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        CollapsingArtistHeader(
+                            artist = artist,
+                            height = headerHeight,
+                            collapseFraction = collapseFraction,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp)
+                        )
+
+                        SecondaryTabRow(
+                            selectedTabIndex = pagerState.currentPage,
+                            containerColor = SaltTheme.colors.background.copy(alpha = 0f),
+                            contentColor = SaltTheme.colors.text,
+                            indicator = {
+                                SecondaryIndicator(
+                                    modifier = Modifier.tabIndicatorOffset(pagerState.currentPage),
+                                    color = SaltTheme.colors.highlight
+                                )
                             }
+                        ) {
+                            Tab(
+                                selected = pagerState.currentPage == 0,
+                                onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                                text = {
+                                    Text(
+                                        text = stringResource(R.string.artist_hot_songs),
+                                        style = SaltTheme.textStyles.sub,
+                                        color = SaltTheme.colors.text,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            )
+                            Tab(
+                                selected = pagerState.currentPage == 1,
+                                onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+                                text = {
+                                    Text(
+                                        text = stringResource(R.string.artist_albums),
+                                        style = SaltTheme.textStyles.sub,
+                                        color = SaltTheme.colors.text,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            )
+                        }
 
-                            else -> {
-                                LazyColumn(
-                                    state = albumsListState,
-                                    modifier = Modifier.fillMaxSize().overScrollVertical(),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    if (albums.isEmpty()) {
-                                        item {
-                                            Text(
-                                                text = stringResource(R.string.artist_no_albums),
-                                                style = SaltTheme.textStyles.sub,
-                                                color = SaltTheme.colors.subText,
-                                                modifier = Modifier.padding(vertical = 16.dp, horizontal = 12.dp)
-                                            )
-                                        }
-                                    } else {
-                                        items(
-                                            count = albums.size,
-                                            key = { index -> albums[index].id ?: index.toLong() }
-                                        ) { index ->
-                                            val album = albums.getOrNull(index)
-                                            if (album != null) {
-                                                AlbumItem(
-                                                    album = album,
-                                                    onClick = {
-                                                        val id = album.id ?: return@AlbumItem
-                                                        navController.navigate(ScreenRoute.AlbumDetail.createRoute(id))
-                                                    }
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                        ) { page ->
+                            when (page) {
+                                0 -> {
+                                    LazyColumn(
+                                        state = songsListState,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .overScrollVertical(),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        if (topSongs.isEmpty()) {
+                                            item {
+                                                Text(
+                                                    text = stringResource(R.string.artist_no_songs),
+                                                    style = SaltTheme.textStyles.sub,
+                                                    color = SaltTheme.colors.subText,
+                                                    modifier = Modifier.padding(
+                                                        vertical = 16.dp,
+                                                        horizontal = 12.dp
+                                                    )
                                                 )
                                             }
+                                        } else {
+                                            items(
+                                                count = topSongs.size,
+                                                key = { index -> topSongs[index].id }
+                                            ) { index ->
+                                                val song = topSongs.getOrNull(index)
+                                                if (song != null) {
+                                                    SongItem(
+                                                        song = song,
+                                                        onMoreClick = {
+                                                            selectedSongForAction = it
+                                                            showSongActionDialog = true
+                                                        },
+                                                        onClick = { songId ->
+                                                            playerViewModel.playTargetSongWithPlaylistSmart(
+                                                                targetSongId = songId,
+                                                                allSongIds = topSongs.map { it.id },
+                                                            )
+                                                        }
+                                                    )
+                                                } else {
+                                                    SongItemPlaceholder()
+                                                }
+                                            }
                                         }
-                                    }
 
-                                    item { Spacer(modifier = Modifier.height(12.dp)) }
+                                        item { Spacer(modifier = Modifier.height(12.dp)) }
+                                    }
+                                }
+
+                                else -> {
+                                    LazyColumn(
+                                        state = albumsListState,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .overScrollVertical(),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        if (albums.isEmpty()) {
+                                            item {
+                                                Text(
+                                                    text = stringResource(R.string.artist_no_albums),
+                                                    style = SaltTheme.textStyles.sub,
+                                                    color = SaltTheme.colors.subText,
+                                                    modifier = Modifier.padding(
+                                                        vertical = 16.dp,
+                                                        horizontal = 12.dp
+                                                    )
+                                                )
+                                            }
+                                        } else {
+                                            items(
+                                                count = albums.size,
+                                                key = { index ->
+                                                    albums[index].id ?: index.toLong()
+                                                }
+                                            ) { index ->
+                                                val album = albums.getOrNull(index)
+                                                if (album != null) {
+                                                    AlbumItem(
+                                                        album = album,
+                                                        onClick = {
+                                                            val id = album.id ?: return@AlbumItem
+                                                            navController.navigate(
+                                                                ScreenRoute.AlbumDetail.createRoute(
+                                                                    id
+                                                                )
+                                                            )
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        item { Spacer(modifier = Modifier.height(12.dp)) }
+                                    }
                                 }
                             }
                         }
@@ -383,7 +410,6 @@ fun ArtistScreen(
                 }
             }
         }
-    }
     }
 }
 

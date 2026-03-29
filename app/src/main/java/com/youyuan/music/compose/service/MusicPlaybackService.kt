@@ -1,9 +1,9 @@
 package com.youyuan.music.compose.service
 
 import android.app.PendingIntent
-import android.net.Uri
 import android.os.Bundle
 import androidx.annotation.OptIn
+import androidx.core.net.toUri
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -11,7 +11,6 @@ import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.CacheDataSink
@@ -24,6 +23,8 @@ import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import com.youyuan.music.compose.BuildConfig
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.ApiClient
@@ -31,21 +32,18 @@ import com.youyuan.music.compose.api.apis.SongUrlApi
 import com.youyuan.music.compose.pref.AudioQualityLevel
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
-import com.google.common.util.concurrent.Futures
-import com.google.common.util.concurrent.ListenableFuture
 import com.youyuan.music.compose.utils.MediaCache
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
-import androidx.core.net.toUri
-import kotlinx.coroutines.flow.distinctUntilChanged
 
 @UnstableApi
 @AndroidEntryPoint
@@ -78,11 +76,12 @@ class MusicPlaybackService : MediaLibraryService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    private val closeCommandButton: CommandButton = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
-        .setDisplayName("Close")
-        .setCustomIconResId(R.drawable.ic_close_24px)
-        .setSessionCommand(SessionCommand(CUSTOM_COMMAND_CLOSE, Bundle.EMPTY))
-        .build()
+    private val closeCommandButton: CommandButton =
+        CommandButton.Builder(CommandButton.ICON_UNDEFINED)
+            .setDisplayName("Close")
+            .setCustomIconResId(R.drawable.ic_close_24px)
+            .setSessionCommand(SessionCommand(CUSTOM_COMMAND_CLOSE, Bundle.EMPTY))
+            .build()
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -115,20 +114,22 @@ class MusicPlaybackService : MediaLibraryService() {
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 
         // 解析占位 URI：yym://song/{id} -> 真实播放 URL
-        val resolvingFactory = ResolvingDataSource.Factory(cacheDataSourceFactory) { dataSpec: DataSpec ->
-            val uri = dataSpec.uri
-            if (uri.scheme != "yym" || uri.host != "song") return@Factory dataSpec
+        val resolvingFactory =
+            ResolvingDataSource.Factory(cacheDataSourceFactory) { dataSpec: DataSpec ->
+                val uri = dataSpec.uri
+                if (uri.scheme != "yym" || uri.host != "song") return@Factory dataSpec
 
-            val songId = uri.pathSegments.firstOrNull()?.toLongOrNull()
-                ?: throw IOException("Invalid song placeholder uri: $uri")
+                val songId = uri.pathSegments.firstOrNull()?.toLongOrNull()
+                    ?: throw IOException("Invalid song placeholder uri: $uri")
 
-            val level = currentQualityLevel
-            val cacheKey = "$songId|$level"
+                val level = currentQualityLevel
+                val cacheKey = "$songId|$level"
 
-            val playUrl = playUrlCache[cacheKey] ?: runBlocking {
-                val response = songUrlApi.getSongUrl(songIds = songId.toString(), qualityLevel = level)
-                response.data?.firstOrNull()?.url
-            }?.takeIf { it.isNotBlank() }
+                val playUrl = playUrlCache[cacheKey] ?: runBlocking {
+                    val response =
+                        songUrlApi.getSongUrl(songIds = songId.toString(), qualityLevel = level)
+                    response.data?.firstOrNull()?.url
+                }?.takeIf { it.isNotBlank() }
                 ?: runBlocking {
                     // 兜底：若所选档位拿不到 url，则回落到 standard，避免直接播放失败
                     val response = songUrlApi.getSongUrl(
@@ -137,18 +138,18 @@ class MusicPlaybackService : MediaLibraryService() {
                     )
                     response.data?.firstOrNull()?.url
                 }
-            playUrl?.takeIf { it.isNotBlank() }?.also { resolved ->
-                playUrlCache[cacheKey] = resolved
-            }
+                playUrl?.takeIf { it.isNotBlank() }?.also { resolved ->
+                    playUrlCache[cacheKey] = resolved
+                }
 
-            if (playUrl.isNullOrBlank()) {
-                throw IOException("Empty play url for songId=$songId")
-            }
+                if (playUrl.isNullOrBlank()) {
+                    throw IOException("Empty play url for songId=$songId")
+                }
 
-            dataSpec.buildUpon()
-                .setUri(playUrl.toUri())
-                .build()
-        }
+                dataSpec.buildUpon()
+                    .setUri(playUrl.toUri())
+                    .build()
+            }
 
         val mediaSourceFactory = DefaultMediaSourceFactory(this)
             .setDataSourceFactory(resolvingFactory)
@@ -185,15 +186,17 @@ class MusicPlaybackService : MediaLibraryService() {
                 settingsDataStore = settingsDataStore
             )
 
-            mediaLibrarySession = MediaLibrarySession.Builder(this, wrapperPlayer,
+            mediaLibrarySession = MediaLibrarySession.Builder(
+                this, wrapperPlayer,
                 LibrarySessionCallback()
             )
                 .setCustomLayout(listOf(closeCommandButton))
                 .setSessionActivity(sessionActivityPendingIntent!!)
                 .build()
 
-            val provider : DefaultMediaNotificationProvider = DefaultMediaNotificationProvider.Builder(this)
-                .build()
+            val provider: DefaultMediaNotificationProvider =
+                DefaultMediaNotificationProvider.Builder(this)
+                    .build()
             val notificationProvider = provider.apply {
                 setSmallIcon(R.drawable.ic_launcher_foreground)
             }

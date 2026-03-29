@@ -5,7 +5,6 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavGraphBuilder
@@ -62,6 +61,12 @@ fun NavGraphBuilder.navigationBuilder(
     // 设置页面
     composable(ScreenRoute.Settings.route) {
         SettingsScreen(
+            modifier = Modifier,
+            onBack = { navController.popBackStack() },
+        )
+    }
+    composable(ScreenRoute.DownloadTasks.route) {
+        DownloadTasksScreen(
             modifier = Modifier,
             onBack = { navController.popBackStack() },
         )

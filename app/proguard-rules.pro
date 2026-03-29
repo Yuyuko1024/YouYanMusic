@@ -44,3 +44,8 @@
 # Hilt / Inject（兜底）
 -keep class dagger.hilt.** { *; }
 -keep class javax.inject.** { *; }
+
+# jaudiotagger 在 Android 上不使用的 AWT/ImageIO 类（仅 suppress R8 缺失类检查）
+-dontwarn java.awt.image.BufferedImage
+-dontwarn javax.imageio.ImageIO
+-dontwarn javax.imageio.stream.ImageInputStream

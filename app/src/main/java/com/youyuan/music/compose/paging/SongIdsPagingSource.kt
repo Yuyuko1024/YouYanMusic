@@ -17,7 +17,8 @@ class SongIdsPagingSource(
         // 重新刷新时，尝试定位到当前列表中间的位置
         return state.anchorPosition?.let { anchorPosition ->
             val anchorPage = state.closestPageToPosition(anchorPosition)
-            anchorPage?.prevKey?.plus(state.config.pageSize) ?: anchorPage?.nextKey?.minus(state.config.pageSize)
+            anchorPage?.prevKey?.plus(state.config.pageSize)
+                ?: anchorPage?.nextKey?.minus(state.config.pageSize)
         }
     }
 

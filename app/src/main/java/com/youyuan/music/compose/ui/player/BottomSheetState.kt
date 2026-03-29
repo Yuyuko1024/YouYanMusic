@@ -133,6 +133,7 @@ class BottomSheetState(
                         dispatchRawDelta(delta)
                         available // 消费所有的滚动
                     }
+
                     else -> Offset.Zero
                 }
             }
@@ -174,6 +175,7 @@ class BottomSheetState(
                         performFling(velocity)
                         available
                     }
+
                     else -> Velocity.Zero
                 }
             }
@@ -197,6 +199,7 @@ class BottomSheetState(
 
 /** 展开状态锚点 */
 const val EXPANDED_ANCHOR = 1
+
 /** 折叠状态锚点 */
 const val COLLAPSED_ANCHOR = 0
 

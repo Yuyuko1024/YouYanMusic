@@ -12,12 +12,12 @@ interface SearchApi {
         @Query("keywords") keywords: String,
         @Query("limit") limit: Int = 30,
         @Query("type") type: Int = 1,
-    ) : SearchSongsResponse
+    ): SearchSongsResponse
 
     @GET("/search/suggest")
     suspend fun searchSuggestions(
         @Query("keywords") keywords: String,
         @Query("type") type: String = "mobile"
-    ) : SearchSuggestResponse
+    ): SearchSuggestResponse
 
 }

@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import coil3.compose.AsyncImage
 import com.moriafly.salt.ui.Button
 import com.moriafly.salt.ui.ItemEdit
 import com.moriafly.salt.ui.ItemOuterTextButton
@@ -79,6 +78,7 @@ fun LoginScreen(
                 profileViewModel.clearQrCode()
                 navController.popBackStack()
             }
+
             ProfileViewModel.QR_STATUS_EXPIRED -> {
                 // 二维码过期，关闭对话框
                 showQrCodeDialog = false
@@ -256,12 +256,13 @@ fun QrCodeDialog(
                         modifier = Modifier.size(48.dp)
                     )
                 }
+
                 qrCodeImage != null -> {
                     // 显示二维码
                     val base64Image = qrCodeImage.substringAfter("base64,")
                     val imageBytes = Base64.decode(base64Image, Base64.DEFAULT)
                     val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                    
+
                     if (bitmap != null) {
                         Image(
                             bitmap = bitmap.asImageBitmap(),
@@ -287,6 +288,7 @@ fun QrCodeDialog(
                     style = SaltTheme.textStyles.sub
                 )
             }
+
             ProfileViewModel.QR_STATUS_CONFIRMING -> {
                 Text(
                     text = "请在手机上确认登录",
@@ -298,6 +300,7 @@ fun QrCodeDialog(
                     fontWeight = FontWeight.Bold
                 )
             }
+
             ProfileViewModel.QR_STATUS_SUCCESS -> {
                 Text(
                     text = "登录成功！",
@@ -309,6 +312,7 @@ fun QrCodeDialog(
                     fontWeight = FontWeight.Bold
                 )
             }
+
             ProfileViewModel.QR_STATUS_EXPIRED -> {
                 Text(
                     text = "二维码已过期",

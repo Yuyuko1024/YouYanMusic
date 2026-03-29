@@ -20,7 +20,7 @@ class SearchViewModel @Inject constructor(
     private val searchApi: SearchApi = apiClient.createService(SearchApi::class.java)
 
     private val _searchQueryText = MutableStateFlow("")
-    val searchQueryText : StateFlow<String> = _searchQueryText.asStateFlow()
+    val searchQueryText: StateFlow<String> = _searchQueryText.asStateFlow()
 
     private val _searchSuggestions = MutableStateFlow<List<String>>(emptyList())
     val searchSuggestions: StateFlow<List<String>> = _searchSuggestions.asStateFlow()
@@ -44,7 +44,8 @@ class SearchViewModel @Inject constructor(
                     keywords = keywords,
                     type = "mobile"
                 )
-                _searchSuggestions.value = response.result?.allMatch?.mapNotNull { it.keyword } ?: emptyList()
+                _searchSuggestions.value =
+                    response.result?.allMatch?.mapNotNull { it.keyword } ?: emptyList()
             } catch (e: Exception) {
                 _searchSuggestions.value = emptyList()
             }

@@ -18,6 +18,7 @@
     <!-- Drawer menu -->
     <string name="drawer_home">主页</string>
     <string name="drawer_settings">设置</string>
+    <string name="drawer_download_tasks">下载任务</string>
 
     <!-- Content descriptions -->
     <string name="cd_drawer">侧边抽屉按钮</string>
@@ -118,6 +119,33 @@
     <string name="song_action_comments">评论</string>
     <string name="song_action_add_to_liked">加入我喜欢的音乐</string>
     <string name="song_action_remove_from_liked">从我喜欢的音乐移除</string>
+    <string name="song_action_save_song">保存到本地</string>
+    <string name="song_action_saving">正在保存…</string>
+    <string name="song_action_save_requires_login">请先登录后再保存歌曲</string>
+    <string name="song_action_save_permission_denied">未授予存储权限，无法保存到本地</string>
+
+    <string name="settings_download_quality">默认保存音质</string>
+
+    <string name="download_task_notification_title">歌曲下载中</string>
+    <string name="download_task_preparing">准备下载任务…</string>
+    <string name="download_task_fetching">正在下载并保存…</string>
+    <string name="download_task_completed">下载完成</string>
+    <string name="download_task_empty">暂无下载任务</string>
+    <string name="download_task_status_enqueued">队列中</string>
+    <string name="download_task_status_running">进行中</string>
+    <string name="download_task_status_succeeded">已完成</string>
+    <string name="download_task_status_failed">失败</string>
+    <string name="download_task_status_blocked">阻塞中</string>
+    <string name="download_task_status_cancelled">已取消</string>
+    <string name="download_task_failed_hint">任务失败，请重新发起下载</string>
+    <string name="download_task_cover_content_description">歌曲封面</string>
+    <string name="download_task_cancel_action">取消</string>
+    <string name="download_task_delete_record">删除记录</string>
+    <string name="download_task_delete_confirm_title">删除下载记录</string>
+    <string name="download_task_delete_confirm_message">要从列表中移除此任务吗？</string>
+    <string name="download_task_delete_with_file">同时删除已下载文件</string>
+    <string name="download_task_file_deleted">已删除下载文件</string>
+    <string name="download_task_file_delete_failed">删除下载文件失败</string>
 
     <!-- Artist -->
     <string name="artist_hot_songs">热门歌曲</string>

@@ -1,5 +1,6 @@
 package com.youyuan.music.compose.ui.viewmodel
 
+import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.lifecycle.ViewModel
@@ -15,34 +16,36 @@ import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.AlbumApi
 import com.youyuan.music.compose.api.apis.CommentApi
 import com.youyuan.music.compose.api.apis.LyricsApi
-import com.youyuan.music.compose.api.apis.SongLikeApi
 import com.youyuan.music.compose.api.apis.SongApi
+import com.youyuan.music.compose.api.apis.SongLikeApi
 import com.youyuan.music.compose.api.apis.SongUrlApi
 import com.youyuan.music.compose.api.model.Artist
-import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.api.model.Song
+import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.data.PlaylistInvalidationBus
 import com.youyuan.music.compose.data.SongDetailPool
+import com.youyuan.music.compose.pref.AudioQualityLevel
+import com.youyuan.music.compose.pref.SettingsDataStore
 import com.youyuan.music.compose.utils.Logger
 import com.youyuan.music.compose.utils.PlayerController
 import com.youyuan.music.compose.utils.PlayerPlaylistManager
 import com.youyuan.music.compose.utils.toSongDetail
-import com.youyuan.music.compose.pref.AudioQualityLevel
-import com.youyuan.music.compose.pref.SettingsDataStore
+import com.youyuan.music.compose.worker.DownloadTaskManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -50,14 +53,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import java.util.Collections
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
@@ -68,6 +70,7 @@ import javax.inject.Inject
 @ExperimentalFoundationApi
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val apiClient: ApiClient,
     private val playerController: PlayerController,
     private val songDetailPool: SongDetailPool,
@@ -132,8 +135,10 @@ class PlayerViewModel @Inject constructor(
     private val _audioQualityError = MutableStateFlow<String?>(null)
     val audioQualityError: StateFlow<String?> = _audioQualityError.asStateFlow()
 
-    private val _availableAudioQualities = MutableStateFlow<List<AudioQualityAvailability>>(emptyList())
-    val availableAudioQualities: StateFlow<List<AudioQualityAvailability>> = _availableAudioQualities.asStateFlow()
+    private val _availableAudioQualities =
+        MutableStateFlow<List<AudioQualityAvailability>>(emptyList())
+    val availableAudioQualities: StateFlow<List<AudioQualityAvailability>> =
+        _availableAudioQualities.asStateFlow()
 
     private val _currentArtists = MutableStateFlow<List<Artist>>(emptyList())
     val currentArtists: StateFlow<List<Artist>> = _currentArtists.asStateFlow()
@@ -165,7 +170,8 @@ class PlayerViewModel @Inject constructor(
         _error.value = null
     }
 
-    val playlist: StateFlow<List<PlayerPlaylistManager.PlaylistItem>> = PlayerPlaylistManager.playlist
+    val playlist: StateFlow<List<PlayerPlaylistManager.PlaylistItem>> =
+        PlayerPlaylistManager.playlist
 
     val currentMediaItem: StateFlow<MediaItem?> = combine(
         playerController.currentMediaItemIndex,
@@ -248,11 +254,15 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun throwIfRiskCode(code: Int?, message: String? = null) {
-        if (code == -462) throw RiskControlException(message ?: "检测到您的网络环境存在风险，请稍后再试")
+        if (code == -462) throw RiskControlException(
+            message ?: "检测到您的网络环境存在风险，请稍后再试"
+        )
     }
 
     private fun throwIfRiskCode(code: Long?, message: String? = null) {
-        if (code == -462L) throw RiskControlException(message ?: "检测到您的网络环境存在风险，请稍后再试")
+        if (code == -462L) throw RiskControlException(
+            message ?: "检测到您的网络环境存在风险，请稍后再试"
+        )
     }
 
     private fun idsQueryJson(ids: List<Long>): String {
@@ -311,7 +321,8 @@ class PlayerViewModel @Inject constructor(
                 }
                 val code = resp.code
                 if (code != null && code != 200) {
-                    _error.value = if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败"
+                    _error.value =
+                        if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败"
                     return@launch
                 }
                 _isCurrentSongLiked.value = targetLike
@@ -324,8 +335,9 @@ class PlayerViewModel @Inject constructor(
                     return@launch
                 }
                 throwIfRisk(e)
-                _error.value = (if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败") +
-                    (e.message?.let { ": $it" } ?: "")
+                _error.value =
+                    (if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败") +
+                            (e.message?.let { ": $it" } ?: "")
             }
         }
     }
@@ -380,7 +392,8 @@ class PlayerViewModel @Inject constructor(
                 }
                 val code = resp.code
                 if (code != null && code != 200) {
-                    _error.value = if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败"
+                    _error.value =
+                        if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败"
                     withContext(Dispatchers.Main) { onResult?.invoke(false) }
                     return@launch
                 }
@@ -399,8 +412,9 @@ class PlayerViewModel @Inject constructor(
                     return@launch
                 }
                 throwIfRisk(e)
-                _error.value = (if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败") +
-                    (e.message?.let { ": $it" } ?: "")
+                _error.value =
+                    (if (targetLike) "添加到我喜欢的音乐失败" else "从我喜欢的音乐移除失败") +
+                            (e.message?.let { ": $it" } ?: "")
                 withContext(Dispatchers.Main) { onResult?.invoke(false) }
             }
         }
@@ -445,7 +459,7 @@ class PlayerViewModel @Inject constructor(
             }
         }
     }
-    
+
     init {
         viewModelScope.launch {
             combine(
@@ -738,19 +752,19 @@ class PlayerViewModel @Inject constructor(
         val regex = Regex("\\[\\d{1,2}:\\d{2}(?:\\.\\d{1,3})?\\]")
         return line.replace(regex, "")
     }
-    
+
     fun getCurrentPosition(): Long = playerController.getCurrentPosition()
-    
+
     fun getDuration(): Long = playerController.getDuration()
-    
+
     fun seekTo(positionMs: Long) = playerController.seekTo(positionMs)
 
     fun togglePlayPause() = playerController.togglePlayPause()
-    
+
     fun skipToNext() = playerController.skipToNext()
-    
+
     fun skipToPrevious() = playerController.skipToPrevious()
-    
+
     fun getPlayer() = playerController.getPlayer()
 
     /**
@@ -823,7 +837,12 @@ class PlayerViewModel @Inject constructor(
                 }
 
                 PlayerPlaylistManager.setPlaylist(items)
-                PlayerPlaylistManager.setCurrentIndex(startIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0)))
+                PlayerPlaylistManager.setCurrentIndex(
+                    startIndex.coerceIn(
+                        0,
+                        (items.size - 1).coerceAtLeast(0)
+                    )
+                )
                 playerController.setMediaItems(
                     mediaItems = items.map { it.toMediaItemSafe() },
                     startIndex = startIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0)),
@@ -905,7 +924,8 @@ class PlayerViewModel @Inject constructor(
                 PlayerPlaylistManager.addItemsAt(desiredIndex, listOf(item))
                 playerController.addMediaItems(desiredIndex, listOf(item.toMediaItemSafe()))
 
-                val playIndex = PlayerPlaylistManager.findSongIndex(songId).takeIf { it != -1 } ?: desiredIndex
+                val playIndex =
+                    PlayerPlaylistManager.findSongIndex(songId).takeIf { it != -1 } ?: desiredIndex
                 playerController.getPlayer()?.seekTo(playIndex, 0L)
             }
         }
@@ -986,7 +1006,8 @@ class PlayerViewModel @Inject constructor(
                     }
                 } ?: return@launch
 
-                val targetFullIndex = _fullPlaylistIndexMap[targetSongId] ?: allSongIds.indexOf(targetSongId)
+                val targetFullIndex =
+                    _fullPlaylistIndexMap[targetSongId] ?: allSongIds.indexOf(targetSongId)
                 val current = PlayerPlaylistManager.playlist.value
                 val insertIndex = current.count { cur ->
                     val id = cur.song.id
@@ -1065,10 +1086,10 @@ class PlayerViewModel @Inject constructor(
 
     fun removeSongInPlaylistById(songId: Long?) {
         if (songId == null) return
-        
+
         val currentPlaylist = PlayerPlaylistManager.playlist.value
         val index = currentPlaylist.indexOfFirst { it.song.id == songId }
-        
+
         if (index != -1) {
             if (currentPlaylist.size == 1) {
                 clearPlaylist()
@@ -1080,7 +1101,8 @@ class PlayerViewModel @Inject constructor(
                 playlistMutationMutex.withLock {
                     onPlayerThread {
                         if (index == currentIndex) {
-                            val nextIndex = if (index < currentPlaylist.size - 1) index else index - 1
+                            val nextIndex =
+                                if (index < currentPlaylist.size - 1) index else index - 1
                             playerController.getPlayer()?.seekToDefaultPosition(nextIndex)
                             playerController.getPlayer()?.play()
                         }
@@ -1149,7 +1171,8 @@ class PlayerViewModel @Inject constructor(
                     val newIndex = PlayerPlaylistManager.playlist.value.size - 1
                     PlayerPlaylistManager.setCurrentIndex(newIndex)
 
-                    val mediaItem = PlayerPlaylistManager.buildMediaItem(songDetail, playUrl, albumArtUrl)
+                    val mediaItem =
+                        PlayerPlaylistManager.buildMediaItem(songDetail, playUrl, albumArtUrl)
                     playerController.addAndPlay(mediaItem)
 
                     withContext(Dispatchers.IO) {
@@ -1171,7 +1194,8 @@ class PlayerViewModel @Inject constructor(
     private suspend fun fetchSongUrl(songId: Long?): String? {
         if (songId == null) return null
         return try {
-            val level = selectedAudioQualityLevel.value.ifBlank { AudioQualityLevel.default().level }
+            val level =
+                selectedAudioQualityLevel.value.ifBlank { AudioQualityLevel.default().level }
             val response = songUrlApi.getSongUrl(songIds = songId.toString(), qualityLevel = level)
             throwIfRiskCode(response.code)
             response.data?.firstOrNull()?.url
@@ -1218,7 +1242,8 @@ class PlayerViewModel @Inject constructor(
                                     val item = resp.data?.firstOrNull()
                                     val urlOk = !item?.url.isNullOrBlank()
                                     val actual = item?.level
-                                    val available = urlOk && actual?.equals(q.level, ignoreCase = true) == true
+                                    val available =
+                                        urlOk && actual?.equals(q.level, ignoreCase = true) == true
                                     AudioQualityAvailability(
                                         requested = q,
                                         available = available,
@@ -1268,7 +1293,8 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // 再拉一次 URL 做“确认”：如果返回的 level 不是用户选择的，视为不可用
-                val resp = songUrlApi.getSongUrl(songIds = songId.toString(), qualityLevel = level.level)
+                val resp =
+                    songUrlApi.getSongUrl(songIds = songId.toString(), qualityLevel = level.level)
                 throwIfRiskCode(resp.code)
                 val item = resp.data?.firstOrNull()
                 val url = item?.url
@@ -1308,6 +1334,48 @@ class PlayerViewModel @Inject constructor(
                 }
                 throwIfRisk(e)
                 _error.value = e.message ?: "切换音质失败"
+            }
+        }
+    }
+
+    fun saveSongToDevice(
+        songId: Long,
+        songTitle: String?,
+        artistName: String?,
+        albumName: String?,
+        artworkUrl: String?,
+        onResult: ((Boolean, String) -> Unit)? = null,
+    ) {
+        if (isRiskBlocked()) {
+            val message = "检测到您的网络环境存在风险，请稍后再试"
+            _error.value = message
+            onResult?.invoke(false, message)
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val selectedLevel = settingsDataStore.downloadAudioQualityLevel.first()
+                    .ifBlank { AudioQualityLevel.default().level }
+                DownloadTaskManager.enqueueSongDownload(
+                    context = context,
+                    songId = songId,
+                    songTitle = songTitle,
+                    songArtist = artistName,
+                    songAlbum = albumName,
+                    artworkUrl = artworkUrl,
+                    qualityLevel = selectedLevel,
+                )
+
+                withContext(Dispatchers.Main) {
+                    onResult?.invoke(true, "已加入下载任务")
+                }
+            } catch (e: Exception) {
+                val message = e.message ?: "保存歌曲失败"
+                _error.value = message
+                withContext(Dispatchers.Main) {
+                    onResult?.invoke(false, message)
+                }
             }
         }
     }
@@ -1383,12 +1451,17 @@ class PlayerViewModel @Inject constructor(
                 val afterCount = (safePreload - 1 - beforeCount).coerceAtLeast(0)
 
                 val windowStart = (targetIndex - beforeCount).coerceAtLeast(0)
-                val windowEndExclusive = (targetIndex + afterCount + 1).coerceAtMost(allSongIds.size)
+                val windowEndExclusive =
+                    (targetIndex + afterCount + 1).coerceAtMost(allSongIds.size)
                 allSongIds.subList(windowStart, windowEndExclusive)
 
                 // 1) 目标歌曲优先：先插入无 URL 的占位 Item，URL 在真正播放时再加载
                 val targetItem = buildPlaylistItemsByIds(listOf(targetSongId)).firstOrNull()
-                    ?: PlayerPlaylistManager.PlaylistItem(song = placeholderSongDetail(targetSongId), playUrl = null, albumArtUrl = null)
+                    ?: PlayerPlaylistManager.PlaylistItem(
+                        song = placeholderSongDetail(targetSongId),
+                        playUrl = null,
+                        albumArtUrl = null
+                    )
 
                 // 占位 URI 会在 Service 的 DataSource 中解析为真实 URL
                 commitSetPlaylist(sessionId, listOf(targetItem), startIndex = 0, startPlay = true)

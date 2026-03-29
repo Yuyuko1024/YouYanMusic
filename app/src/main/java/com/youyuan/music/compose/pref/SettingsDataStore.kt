@@ -37,6 +37,9 @@ class SettingsDataStore(context: Context) {
         // 播放器音质（/song/url/v1 的 level）
         val PLAYER_AUDIO_QUALITY_LEVEL = stringPreferencesKey("player_audio_quality_level")
 
+        // 保存歌曲默认音质（/song/url/v1 的 level）
+        val DOWNLOAD_AUDIO_QUALITY_LEVEL = stringPreferencesKey("download_audio_quality_level")
+
         // 播放会话（播放列表 + 索引 + 进度）
         val PLAYER_SESSION_JSON = stringPreferencesKey("player_session_json")
     }
@@ -94,12 +97,18 @@ class SettingsDataStore(context: Context) {
     }
         .map { preferences ->
             // 默认值为 0，即 Media3 默认行为
-            preferences[PLAYER_SEEK_TO_PREVIOUS_ACTION] ?: PlayerSeekToPreviousAction.DEFAULT.ordinal
+            preferences[PLAYER_SEEK_TO_PREVIOUS_ACTION]
+                ?: PlayerSeekToPreviousAction.DEFAULT.ordinal
         }
 
     val playerAudioQualityLevel: Flow<String> = dataStore.data
         .map { preferences ->
             preferences[PLAYER_AUDIO_QUALITY_LEVEL] ?: AudioQualityLevel.default().level
+        }
+
+    val downloadAudioQualityLevel: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[DOWNLOAD_AUDIO_QUALITY_LEVEL] ?: AudioQualityLevel.default().level
         }
 
     val playerSessionJson: Flow<String> = dataStore.data
@@ -154,6 +163,12 @@ class SettingsDataStore(context: Context) {
     suspend fun setPlayerAudioQualityLevel(level: String) {
         dataStore.edit { settings ->
             settings[PLAYER_AUDIO_QUALITY_LEVEL] = level
+        }
+    }
+
+    suspend fun setDownloadAudioQualityLevel(level: String) {
+        dataStore.edit { settings ->
+            settings[DOWNLOAD_AUDIO_QUALITY_LEVEL] = level
         }
     }
 

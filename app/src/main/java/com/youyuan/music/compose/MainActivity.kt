@@ -69,9 +69,10 @@ class MainActivity : ComponentActivity() {
             val isNewYearThemeEnabled = settingsDataStore.newYearThemeEnabled.collectAsState(
                 initial = true
             ).value
-            val isNewYearFireworksEnabled = settingsDataStore.newYearFireworksEnabled.collectAsState(
-                initial = true
-            ).value
+            val isNewYearFireworksEnabled =
+                settingsDataStore.newYearFireworksEnabled.collectAsState(
+                    initial = true
+                ).value
 
             if (isNewYearFestival) {
                 Toast.makeText(

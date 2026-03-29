@@ -7,20 +7,19 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -50,9 +49,8 @@ import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.constants.MiniPlayerHeight
-import com.youyuan.music.compose.constants.PlayerHorizontalPadding
-import com.youyuan.music.compose.ui.uicomponent.AcrylicFlipAsyncImage
 import com.youyuan.music.compose.ui.theme.UiDimens
+import com.youyuan.music.compose.ui.uicomponent.AcrylicFlipAsyncImage
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import compose.icons.TablerIcons
 import compose.icons.tablericons.PlayerPause
@@ -95,6 +93,7 @@ fun MiniPlayer(
     val currentSong = playerViewModel.currentSong.collectAsState().value
     // 封面
     val currentArtworkUrl = playerViewModel.currentAlbumArtUrl.collectAsState().value
+
     // 标题
     fun List<String?>?.toDisplayText(): String? =
         this
@@ -225,7 +224,7 @@ fun MiniPlayer(
             modifier = Modifier
                 .padding(horizontal = 4.dp, vertical = 4.dp)
                 .align(Alignment.CenterVertically)
-            )
+        )
 
         // 将播放控制相关组件封装起来
         PlayerControls(

@@ -57,7 +57,9 @@ fun MainTopAppBar(
         }
         Text(
             text = title,
-            modifier = modifier.fillMaxWidth().weight(1f),
+            modifier = modifier
+                .fillMaxWidth()
+                .weight(1f),
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
             overflow = TextOverflow.Ellipsis,
@@ -93,7 +95,8 @@ fun SearchTopAppBar(
         val backButtonContentDescription = stringResource(R.string.back_btn)
         IconButton(
             onClick = { onBackClick() },
-            modifier = modifier.padding(4.dp)
+            modifier = modifier
+                .padding(4.dp)
                 .semantics {
                     this.role = Role.Button
                     this.contentDescription = backButtonContentDescription
@@ -127,7 +130,8 @@ fun SearchTopAppBar(
                     onClick = {
                         searchViewModel.clearSearchSuggestions()
                     },
-                    modifier = modifier.padding(4.dp)
+                    modifier = modifier
+                        .padding(4.dp)
                         .semantics {
                             this.role = Role.Button
                             this.contentDescription = "清除搜索"
@@ -148,7 +152,8 @@ fun SearchTopAppBar(
                         searchViewModel.searchSongs(searchQuery)
                     }
                 },
-                modifier = modifier.padding(4.dp)
+                modifier = modifier
+                    .padding(4.dp)
                     .semantics {
                         this.role = Role.Button
                         this.contentDescription = "搜索"

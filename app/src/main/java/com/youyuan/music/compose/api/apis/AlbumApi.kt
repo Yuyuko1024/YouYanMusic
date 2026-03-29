@@ -9,6 +9,6 @@ interface AlbumApi {
     @GET("/album")
     suspend fun getAlbumDetails(
         @Query("id") albumId: Long
-    ) : AlbumDetailResponse
+    ): AlbumDetailResponse
 
 }

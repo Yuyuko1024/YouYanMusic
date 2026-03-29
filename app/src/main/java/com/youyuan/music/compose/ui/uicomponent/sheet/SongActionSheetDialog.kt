@@ -1,5 +1,6 @@
 package com.youyuan.music.compose.ui.uicomponent.sheet
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,12 +20,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -38,6 +42,9 @@ import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
+import com.youyuan.music.compose.ui.viewmodel.ProfileViewModel
+import compose.icons.FeatherIcons
+import compose.icons.feathericons.Download
 
 /**
  * 歌曲操作弹窗（当前先做最小可用）：
@@ -56,8 +63,13 @@ fun SongActionSheetDialog(
     song: SongActionInfo,
     navController: NavController? = null,
 ) {
+    val context = LocalContext.current
+    val profileViewModel: ProfileViewModel = hiltViewModel()
+    val isLoggedIn by profileViewModel.isLoggedIn.collectAsState()
+
     var liked by remember(song.songId) { mutableStateOf<Boolean?>(null) }
     var showArtistsList by remember(song.songId) { mutableStateOf(false) }
+    var saving by remember(song.songId) { mutableStateOf(false) }
 
     LaunchedEffect(song.songId) {
         liked = playerViewModel.checkSongLikedOnce(song.songId)
@@ -82,7 +94,13 @@ fun SongActionSheetDialog(
         RoundedColumn {
             Item(
                 onClick = {
-                    song.albumId?.let { navController?.navigate(ScreenRoute.AlbumDetail.createRoute(it)) }
+                    song.albumId?.let {
+                        navController?.navigate(
+                            ScreenRoute.AlbumDetail.createRoute(
+                                it
+                            )
+                        )
+                    }
                     dismiss()
                 },
                 text = "${stringResource(R.string.song_action_album_name)}${song.album}",
@@ -146,6 +164,44 @@ fun SongActionSheetDialog(
                 iconPainter = painterResource(
                     if (isLiked) R.drawable.ic_favorite else R.drawable.ic_favorite_border
                 ),
+                iconColor = SaltTheme.colors.highlight,
+            )
+
+            Item(
+                onClick = {
+                    if (saving) return@Item
+                    if (!isLoggedIn) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.song_action_save_requires_login),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@Item
+                    }
+
+                    val artistForFile = (song.artist?.trim()).takeUnless { it.isNullOrBlank() }
+                        ?: distinctArtists.joinToString(", ") { it.name.orEmpty() }.ifBlank { null }
+
+                    saving = true
+                    playerViewModel.saveSongToDevice(
+                        songId = song.songId,
+                        songTitle = song.title,
+                        artistName = artistForFile,
+                        albumName = song.album,
+                        artworkUrl = song.artworkUrl,
+                        onResult = { ok, message ->
+                            saving = false
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            if (ok) dismiss()
+                        }
+                    )
+                },
+                text = if (saving) {
+                    stringResource(R.string.song_action_saving)
+                } else {
+                    stringResource(R.string.song_action_save_song)
+                },
+                iconPainter = rememberVectorPainter(FeatherIcons.Download),
                 iconColor = SaltTheme.colors.highlight,
             )
         }
