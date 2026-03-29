@@ -12,6 +12,8 @@ import com.youyuan.music.compose.api.apis.SmsLoginApi
 import com.youyuan.music.compose.api.model.CaptchaResponse
 import com.youyuan.music.compose.api.model.Profile
 import com.youyuan.music.compose.api.model.UserPlaylistItem
+import com.youyuan.music.compose.data.PlaylistDetailCache
+import com.youyuan.music.compose.data.PlaylistInvalidationBus
 import com.youyuan.music.compose.pref.TokenDataStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -31,7 +33,9 @@ import javax.inject.Inject
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val apiClient: ApiClient
+    private val apiClient: ApiClient,
+    private val playlistDetailCache: PlaylistDetailCache,
+    private val playlistInvalidationBus: PlaylistInvalidationBus,
 ) : ViewModel() {
 
     private val qrCodeLoginApi: QrCodeLoginApi = apiClient.createService(QrCodeLoginApi::class.java)
@@ -306,7 +310,7 @@ class ProfileViewModel @Inject constructor(
             try {
                 val resp = profileApi.getUserPlaylist(uid = uid)
                 if (resp.code == 200) {
-                    _userPlaylists.value = resp.playlist.orEmpty()
+                    updateUserPlaylistsIncrementally(resp.playlist.orEmpty())
                     lastLoadedUserPlaylistUid = uid
                 } else {
                     _userPlaylists.value = emptyList()
@@ -317,6 +321,54 @@ class ProfileViewModel @Inject constructor(
                 _userPlaylistsError.value = e.message ?: "获取用户歌单失败"
             } finally {
                 _userPlaylistsLoading.value = false
+            }
+        }
+    }
+
+    private fun updateUserPlaylistsIncrementally(incoming: List<UserPlaylistItem>) {
+        val current = _userPlaylists.value
+        if (current.isEmpty()) {
+            _userPlaylists.value = incoming
+            return
+        }
+
+        val currentById = current.associateBy { it.id }
+        val incomingIdSet = incoming.asSequence().map { it.id }.toSet()
+        val removedIds = currentById.keys - incomingIdSet
+        val changedPlaylistIds = linkedSetOf<Long>()
+        val merged = ArrayList<UserPlaylistItem>(incoming.size)
+        var changed = current.size != incoming.size
+
+        incoming.forEachIndexed { index, newItem ->
+            val oldItem = currentById[newItem.id]
+            when {
+                oldItem == null -> {
+                    merged += newItem
+                    changed = true
+                    changedPlaylistIds += newItem.id
+                }
+                oldItem == newItem -> merged += oldItem
+                else -> {
+                    merged += newItem
+                    changed = true
+                    changedPlaylistIds += newItem.id
+                }
+            }
+
+            if (!changed && index < current.size && current[index].id != newItem.id) {
+                changed = true
+            }
+        }
+
+        if (changed) {
+            _userPlaylists.value = merged
+        }
+
+        val invalidatedIds = (changedPlaylistIds + removedIds)
+        if (invalidatedIds.isNotEmpty()) {
+            invalidatedIds.forEach { playlistId ->
+                playlistDetailCache.clear(playlistId)
+                playlistInvalidationBus.invalidate(playlistId)
             }
         }
     }
