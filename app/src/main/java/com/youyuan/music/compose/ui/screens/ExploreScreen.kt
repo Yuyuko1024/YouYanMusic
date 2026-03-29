@@ -177,14 +177,14 @@ fun ExploreScreen(
 
             if (isLoggedIn) {
                 item {
-                    SectionTitle(text = "每日推荐歌单")
+                    SectionTitle(text = "推荐歌单")
                 }
 
                 item {
-                    DailyRecommendPlaylistSection(
-                        playlists = dailyRecommendPlaylists,
-                        loading = dailyRecommendPlaylistsLoading,
-                        error = dailyRecommendPlaylistsError,
+                    PersonalizedPlaylistSection(
+                        playlists = personalizedPlaylists,
+                        loading = personalizedPlaylistsLoading,
+                        error = personalizedPlaylistsError,
                         onPlaylistClick = { playlistId ->
                             navController.navigate(ScreenRoute.PlaylistDetail.createRoute(playlistId))
                         }
@@ -242,21 +242,6 @@ fun ExploreScreen(
             }
 
             item {
-                SectionTitle(text = "推荐歌单")
-            }
-
-            item {
-                PersonalizedPlaylistSection(
-                    playlists = personalizedPlaylists,
-                    loading = personalizedPlaylistsLoading,
-                    error = personalizedPlaylistsError,
-                    onPlaylistClick = { playlistId ->
-                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(playlistId))
-                    }
-                )
-            }
-
-            item {
                 SectionTitle(text = "新歌推荐")
             }
 
@@ -273,6 +258,21 @@ fun ExploreScreen(
                                 allSongIds = ids,
                             )
                         }
+                    }
+                )
+            }
+
+            item {
+                SectionTitle(text = "每日推荐歌单")
+            }
+
+            item {
+                DailyRecommendPlaylistSection(
+                    playlists = dailyRecommendPlaylists,
+                    loading = dailyRecommendPlaylistsLoading,
+                    error = dailyRecommendPlaylistsError,
+                    onPlaylistClick = { playlistId ->
+                        navController.navigate(ScreenRoute.PlaylistDetail.createRoute(playlistId))
                     }
                 )
             }
