@@ -376,7 +376,8 @@ fun MainBottomBar(
                 onClick = {
                     if (currentRoute != screen.route) {
                         navController.navigate(screen.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
+                            // 主 Tab 视为同级入口：切换时清到图根，避免“Profile 压在 Explore 之上”。
+                            popUpTo(navController.graph.id) {
                                 saveState = true
                             }
                             launchSingleTop = true
