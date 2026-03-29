@@ -192,16 +192,23 @@ fun ExploreScreen(
                 }
 
                 item {
-                    SectionTitle(text = "每日推荐歌曲")
+                    SectionTitleWithAction(
+                        text = "私人FM",
+                        actionText = "刷新",
+                        actionEnabled = !personalFmSongsLoading,
+                        onActionClick = {
+                            exploreViewModel.loadPersonalFm(isLoggedIn = isLoggedIn, force = true)
+                        }
+                    )
                 }
 
                 item {
-                    DailyRecommendSongsSection(
-                        songs = dailyRecommendSongs,
-                        loading = dailyRecommendSongsLoading,
-                        error = dailyRecommendSongsError,
+                    PersonalFmSection(
+                        songs = personalFmSongs,
+                        loading = personalFmSongsLoading,
+                        error = personalFmSongsError,
                         onSongClick = { songId ->
-                            val ids = dailyRecommendSongs.map { it.id }
+                            val ids = personalFmSongs.map { it.id }
                             if (ids.isNotEmpty()) {
                                 playerViewModel.playTargetSongWithPlaylist(
                                     targetSongId = songId,
@@ -213,16 +220,16 @@ fun ExploreScreen(
                 }
 
                 item {
-                    SectionTitle(text = "私人FM")
+                    SectionTitle(text = "每日推荐歌曲")
                 }
 
                 item {
-                    PersonalFmSection(
-                        songs = personalFmSongs,
-                        loading = personalFmSongsLoading,
-                        error = personalFmSongsError,
+                    DailyRecommendSongsSection(
+                        songs = dailyRecommendSongs,
+                        loading = dailyRecommendSongsLoading,
+                        error = dailyRecommendSongsError,
                         onSongClick = { songId ->
-                            val ids = personalFmSongs.map { it.id }
+                            val ids = dailyRecommendSongs.map { it.id }
                             if (ids.isNotEmpty()) {
                                 playerViewModel.playTargetSongWithPlaylist(
                                     targetSongId = songId,
@@ -487,6 +494,39 @@ private fun SectionTitle(
         modifier = modifier.padding(top = 2.dp),
         color = SaltTheme.colors.text
     )
+}
+
+@UnstableSaltUiApi
+@Composable
+private fun SectionTitleWithAction(
+    text: String,
+    actionText: String,
+    actionEnabled: Boolean,
+    onActionClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            style = SaltTheme.textStyles.main,
+            color = SaltTheme.colors.text,
+        )
+        Text(
+            text = actionText,
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(enabled = actionEnabled, onClick = onActionClick)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        )
+    }
 }
 
 @Composable
