@@ -12,6 +12,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.core.parser.AutoParser
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.AlbumApi
@@ -105,6 +106,7 @@ class PlayerViewModel @Inject constructor(
     private val lyricsApi: LyricsApi = apiClient.createService(LyricsApi::class.java)
     private val commentApi: CommentApi = apiClient.createService(CommentApi::class.java)
     private val songLikeApi: SongLikeApi = apiClient.createService(SongLikeApi::class.java)
+    private val lyricsParser = AutoParser.Builder().build()
 
     private val _currentSong = MutableStateFlow<SongDetail?>(null)
     val currentSong: StateFlow<SongDetail?> = _currentSong.asStateFlow()
@@ -151,6 +153,9 @@ class PlayerViewModel @Inject constructor(
 
     private val _lyrics = MutableStateFlow<String?>(null)
     val lyrics: StateFlow<String?> = _lyrics.asStateFlow()
+
+    private val _parsedLyrics = MutableStateFlow<SyncedLyrics?>(null)
+    val parsedLyrics: StateFlow<SyncedLyrics?> = _parsedLyrics.asStateFlow()
 
     val currentArtistNames: StateFlow<String> = _currentArtists.map { artists ->
         artists.joinToString(", ") { it.name ?: "Unknown" }
@@ -527,11 +532,13 @@ class PlayerViewModel @Inject constructor(
                 .collectLatest { songId ->
                     if (songId == null) {
                         _lyrics.value = null
+                        _parsedLyrics.value = null
                         return@collectLatest
                     }
 
                     val lrc = fetchLyrics(songId)
                     _lyrics.value = lrc
+                    _parsedLyrics.value = parseLyrics(songId = songId, lyricsText = lrc)
                 }
         }
 
@@ -697,8 +704,13 @@ class PlayerViewModel @Inject constructor(
             throwIfRiskCode(response.code)
             if (response.code != 200) return@withContext null
 
-            val main = normalizeLrcText(response.lrc?.lyric)
-            val translated = normalizeLrcText(response.tlyric?.lyric)
+            val mainRaw = response.lrc?.lyric
+            val translatedRaw = response.tlyric?.lyric
+            val karaokeRaw = response.klyric?.lyric
+            val romaRaw = response.romalrc?.lyric
+
+            val main = normalizeLrcText(mainRaw)
+            val translated = normalizeLrcText(translatedRaw)
 
             if (translated.isNullOrBlank()) return@withContext main
             if (main.isNullOrBlank()) return@withContext translated
@@ -715,12 +727,105 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    private suspend fun parseLyrics(songId: Long, lyricsText: String?): SyncedLyrics? =
+        withContext(Dispatchers.Default) {
+            if (lyricsText.isNullOrBlank()) {
+                Logger.debug(TAG, "歌词解析跳过 songId=$songId: lyrics 为空")
+                return@withContext null
+            }
+
+            val sanitizedLyrics = sanitizeLyricsForParser(songId = songId, lyricsText = lyricsText)
+            if (sanitizedLyrics.isBlank()) {
+                Logger.debug(TAG, "歌词解析跳过 songId=$songId: 清洗后为空")
+                return@withContext null
+            }
+
+            try {
+                lyricsParser.parse(sanitizedLyrics)
+            } catch (e: Exception) {
+                Logger.err(
+                    TAG,
+                    "歌词解析失败 songId=$songId message=${e.message} sample=${sanitizedLyrics.take(160)}"
+                )
+                null
+            }
+        }
+
+    private fun sanitizeLyricsForParser(songId: Long, lyricsText: String): String {
+        val timeTagRegex = Regex("\\[(\\d{1,2}:\\d{2}(?:\\.\\d{1,3})?)\\]")
+        val sanitizedLines = ArrayList<String>()
+        var droppedEmptyWithTimestamp = 0
+        var droppedOutOfOrder = 0
+        var lastTimestampMs = Int.MIN_VALUE
+
+        lyricsText.lineSequence().forEach { line ->
+            val tags = timeTagRegex.findAll(line).toList()
+            if (tags.isEmpty()) {
+                sanitizedLines.add(line)
+                return@forEach
+            }
+
+            val content = line.replace(timeTagRegex, "").trim()
+            if (content.isBlank()) {
+                droppedEmptyWithTimestamp++
+                return@forEach
+            }
+
+            val firstTime = tags.first().groupValues.getOrNull(1)
+            val timestampMs = firstTime?.let { parseTimestampToMs(it) }
+            if (timestampMs != null && timestampMs < lastTimestampMs) {
+                droppedOutOfOrder++
+                return@forEach
+            }
+
+            if (timestampMs != null) {
+                lastTimestampMs = timestampMs
+            }
+            sanitizedLines.add(line)
+        }
+
+        return sanitizedLines.joinToString("\n")
+    }
+
+    private fun parseTimestampToMs(timestamp: String): Int? {
+        val normalized = timestamp.trim()
+        val parts = normalized.split(":")
+        if (parts.size != 2) return null
+
+        val minutes = parts[0].toIntOrNull() ?: return null
+        val secParts = parts[1].split(".", limit = 2)
+        val seconds = secParts[0].toIntOrNull() ?: return null
+        val millis = when {
+            secParts.size < 2 -> 0
+            secParts[1].isEmpty() -> 0
+            secParts[1].length == 1 -> (secParts[1] + "00").toIntOrNull() ?: return null
+            secParts[1].length == 2 -> (secParts[1] + "0").toIntOrNull() ?: return null
+            else -> secParts[1].take(3).toIntOrNull() ?: return null
+        }
+        return minutes * 60_000 + seconds * 1_000 + millis
+    }
+
     private fun normalizeLrcText(raw: String?): String? {
         if (raw.isNullOrBlank()) return null
         // 兼容服务端返回 "\\n" 或正常换行 "\n" 两种情况；并统一 Windows 换行
-        return raw
+        val normalized = raw
             .replace("\r\n", "\n")
             .replace("\\n", "\n")
+        return normalizeTimestampWithoutMillis(normalized)
+    }
+
+    private fun normalizeTimestampWithoutMillis(lrc: String): String {
+        // 仅补全 [mm:ss] / [m:ss]，已经是 [mm:ss.xx] / [mm:ss.xxx] 的不改。
+        // 例如: [01:23] -> [01:23.000]
+        val regex = Regex("\\[(\\d{1,2}:\\d{2})(?!\\.\\d{1,3})\\]")
+        return regex.replace(lrc) { match ->
+            "[${match.groupValues[1]}.000]"
+        }
+    }
+
+    private fun countLines(text: String?): Int {
+        if (text.isNullOrBlank()) return 0
+        return text.lineSequence().count()
     }
 
     private fun mergeLyricsByTimestamp(main: String, translated: String): String {
@@ -1100,6 +1205,7 @@ class PlayerViewModel @Inject constructor(
         _currentAlbumArtUrl.value = null
         _currentSongIndex.value = 0
         _lyrics.value = null
+        _parsedLyrics.value = null
         viewModelScope.launch(Dispatchers.IO) {
             settingsDataStore.clearPlayerSession()
         }
@@ -1465,6 +1571,7 @@ class PlayerViewModel @Inject constructor(
                 _currentAlbumArtUrl.value = null
                 _currentSongIndex.value = 0
                 _lyrics.value = null
+                _parsedLyrics.value = null
 
                 // === 阶段 A：快速窗口（preloadCount，默认 50） ===
                 val safePreload = preloadCount.coerceAtLeast(1)

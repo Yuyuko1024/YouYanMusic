@@ -47,8 +47,6 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.placeholder
-import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
-import com.mocharealm.accompanist.lyrics.core.parser.AutoParser
 import com.mocharealm.accompanist.lyrics.ui.composable.lyrics.KaraokeLyricsView
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.UnstableSaltUiApi
@@ -59,10 +57,8 @@ import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.utils.rememberAdaptiveLayoutMode
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.utils.Logger
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.android.awaitFrame
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -75,7 +71,7 @@ fun LyricsPager(
     modifier: Modifier = Modifier,
     playerViewModel: PlayerViewModel
 ) {
-    val lyrics = playerViewModel.lyrics.collectAsState().value
+    val parsedLyrics = playerViewModel.parsedLyrics.collectAsState().value
     val currentPlaying = playerViewModel.currentMediaItem.collectAsState().value
     val currentPositionState = playerViewModel.currentPosition.collectAsState()
     val isPlayingState = playerViewModel.isPlaying.collectAsState()
@@ -83,11 +79,6 @@ fun LyricsPager(
     val localContext = LocalContext.current
 
     val uiColor = LocalPlayerUIColor.current
-
-    // 缓存 AutoParser 实例
-    val autoParser = remember { AutoParser.Builder().build() }
-    // 使用 remember 保存解析后的歌词，避免重复解析
-    var parsedLyrics by remember { mutableStateOf<SyncedLyrics?>(null) }
     val listState = rememberLazyListState()
 
     // 定义动画状态
@@ -105,21 +96,6 @@ fun LyricsPager(
         if (abs(animatedPositionState.longValue - currentPosition) > 1000) {
             animatedPositionState.longValue = currentPosition
         }
-    }
-
-    // 解析歌词
-    LaunchedEffect(lyrics) {
-        parsedLyrics = lyrics?.let {
-            try {
-                withContext(Dispatchers.Default) {
-                    autoParser.parse(it)
-                }
-            } catch (e: Exception) {
-                Logger.err("LyricsPager", "解析歌词失败: ${e.message}")
-                null
-            }
-        }
-        Logger.debug("LyricsPager", "解析歌词完成: ${parsedLyrics != null}")
     }
 
     val isPlaying = isPlayingState.value
