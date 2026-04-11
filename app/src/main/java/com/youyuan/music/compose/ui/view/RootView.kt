@@ -62,11 +62,13 @@ import com.youyuan.music.compose.constants.NavigationBarAnimationSpec
 import com.youyuan.music.compose.constants.NavigationBarHeight
 import com.youyuan.music.compose.ui.player.BottomSheetPlayer
 import com.youyuan.music.compose.ui.player.COLLAPSED_ANCHOR
+import com.youyuan.music.compose.ui.player.LyricsShareDialog
 import com.youyuan.music.compose.ui.player.rememberBottomSheetState
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.screens.navigationBuilder
 import com.youyuan.music.compose.ui.uicomponent.AdaptiveDrawerContainer
 import com.youyuan.music.compose.ui.uicomponent.AppDrawer
+import com.youyuan.music.compose.ui.uicomponent.ModalScaffold
 import com.youyuan.music.compose.ui.uicomponent.NewYearFireworksOverlay
 import com.youyuan.music.compose.ui.utils.AdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.LocalPlayerAwareWindowInsets
@@ -138,6 +140,10 @@ fun RootView(
     val profileViewModel: ProfileViewModel = hiltViewModel()
 
     val playerError by playerViewModel.error.collectAsState()
+    val lyricsShareOverlayState by playerViewModel.lyricsShareOverlayState.collectAsState()
+    val isPlaying by playerViewModel.isPlaying.collectAsState()
+    val currentPlayingSong by playerViewModel.currentSong.collectAsState()
+    val currentSongArtwork by playerViewModel.currentAlbumArtUrl.collectAsState()
 
     LaunchedEffect(playerError) {
         val message = playerError ?: return@LaunchedEffect
@@ -211,142 +217,160 @@ fun RootView(
             currentRoute?.let { currentMainScreenRoute.value = it }
         }
 
-        CompositionLocalProvider(
-            // 提供智能WindowInsets给所有子Screen
-            LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
-        ) {
-            val drawerState = rememberDrawerState(
-                initialValue = if (isTabletLandscape) DrawerValue.Open else DrawerValue.Closed
-            )
-
-            LaunchedEffect(isTabletLandscape) {
-                if (isTabletLandscape) {
-                    drawerState.open()
-                } else {
-                    drawerState.close()
+        ModalScaffold(
+            isModalOpen = lyricsShareOverlayState != null,
+            onDismissRequest = { playerViewModel.dismissLyricsShareOverlay() },
+            modalContent = { dragModifier ->
+                val overlay = lyricsShareOverlayState
+                if (overlay != null) {
+                    LyricsShareDialog(
+                        lyrics = overlay.lyrics,
+                        initialLineStart = overlay.initialLineStart,
+                        isPlaying = isPlaying,
+                        artworkUrl = currentSongArtwork,
+                        currentSong = currentPlayingSong,
+                        dragModifier = dragModifier,
+                        onDismissRequest = { playerViewModel.dismissLyricsShareOverlay() }
+                    )
                 }
             }
+        ) {
+            CompositionLocalProvider(
+                // 提供智能WindowInsets给所有子Screen
+                LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
+            ) {
+                val drawerState = rememberDrawerState(
+                    initialValue = if (isTabletLandscape) DrawerValue.Open else DrawerValue.Closed
+                )
 
-            // 侧边栏打开时，先让返回键优先响应关闭侧边栏
-            BackHandler(enabled = drawerState.isOpen && !isTabletLandscape) {
-                scope.launch { drawerState.close() }
-            }
+                LaunchedEffect(isTabletLandscape) {
+                    if (isTabletLandscape) {
+                        drawerState.open()
+                    } else {
+                        drawerState.close()
+                    }
+                }
 
-            AnimatedContent(
-                targetState = adaptiveLayoutMode,
-                label = "adaptiveLayoutModeTransition"
-            ) { targetMode ->
-                val isTabletLandscapeInTransition = targetMode == AdaptiveLayoutMode.TabletLandscape
-                AdaptiveDrawerContainer(
-                    isTabletLandscape = isTabletLandscapeInTransition,
-                    drawerState = drawerState,
-                    drawerContent = {
-                        AppDrawer(
-                            drawerState = drawerState,
-                            scope = scope,
-                            navController = navController,
-                            currentMainScreenRoute = currentMainScreenRoute,
-                            isTabletLandscape = isTabletLandscapeInTransition,
-                        )
-                    },
-                ) {
-                    NavHost(
-                        navController = navController,
-                        startDestination = ScreenRoute.Explore.route,
-                        enterTransition = {
-                            slideInHorizontally(
-                                animationSpec = tween(500),
-                                initialOffsetX = { fullWidth -> fullWidth }
-                            )
-                        },
-                        exitTransition = {
-                            slideOutHorizontally(
-                                animationSpec = tween(500),
-                                targetOffsetX = { fullWidth -> -fullWidth }
-                            )
-                        },
-                        popEnterTransition = {
-                            slideInHorizontally(
-                                animationSpec = tween(500),
-                                initialOffsetX = { fullWidth -> -fullWidth }
-                            )
-                        },
-                        popExitTransition = {
-                            slideOutHorizontally(
-                                animationSpec = tween(500),
-                                targetOffsetX = { fullWidth -> fullWidth }
+                // 侧边栏打开时，先让返回键优先响应关闭侧边栏
+                BackHandler(enabled = drawerState.isOpen && !isTabletLandscape) {
+                    scope.launch { drawerState.close() }
+                }
+
+                AnimatedContent(
+                    targetState = adaptiveLayoutMode,
+                    label = "adaptiveLayoutModeTransition"
+                ) { targetMode ->
+                    val isTabletLandscapeInTransition = targetMode == AdaptiveLayoutMode.TabletLandscape
+                    AdaptiveDrawerContainer(
+                        isTabletLandscape = isTabletLandscapeInTransition,
+                        drawerState = drawerState,
+                        drawerContent = {
+                            AppDrawer(
+                                drawerState = drawerState,
+                                scope = scope,
+                                navController = navController,
+                                currentMainScreenRoute = currentMainScreenRoute,
+                                isTabletLandscape = isTabletLandscapeInTransition,
                             )
                         },
                     ) {
-                        navigationBuilder(
-                            context = context,
+                        NavHost(
                             navController = navController,
-                            searchViewModel = searchViewModel,
-                            playerViewModel = playerViewModel,
-                            profileViewModel = profileViewModel,
-                            openDrawer = {
-                                if (isTabletLandscapeInTransition) return@navigationBuilder
-                                scope.launch {
-                                    if (drawerState.isClosed) drawerState.open() else drawerState.close()
-                                }
+                            startDestination = ScreenRoute.Explore.route,
+                            enterTransition = {
+                                slideInHorizontally(
+                                    animationSpec = tween(500),
+                                    initialOffsetX = { fullWidth -> fullWidth }
+                                )
                             },
-                        )
-                    }
-                }
-
-                // 监听导航变化以折叠播放器
-                LaunchedEffect(navBackStackEntry) {
-                    navBackStackEntry?.let {
-                        if (playerBottomSheetState.isExpanded) {
-                            playerBottomSheetState.collapseSoft()
+                            exitTransition = {
+                                slideOutHorizontally(
+                                    animationSpec = tween(500),
+                                    targetOffsetX = { fullWidth -> -fullWidth }
+                                )
+                            },
+                            popEnterTransition = {
+                                slideInHorizontally(
+                                    animationSpec = tween(500),
+                                    initialOffsetX = { fullWidth -> -fullWidth }
+                                )
+                            },
+                            popExitTransition = {
+                                slideOutHorizontally(
+                                    animationSpec = tween(500),
+                                    targetOffsetX = { fullWidth -> fullWidth }
+                                )
+                            },
+                        ) {
+                            navigationBuilder(
+                                context = context,
+                                navController = navController,
+                                searchViewModel = searchViewModel,
+                                playerViewModel = playerViewModel,
+                                profileViewModel = profileViewModel,
+                                openDrawer = {
+                                    if (isTabletLandscapeInTransition) return@navigationBuilder
+                                    scope.launch {
+                                        if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                                    }
+                                },
+                            )
                         }
                     }
-                }
-            }
 
-            BottomSheetPlayer(
-                state = playerBottomSheetState,
-                navController = navController,
-                playerViewModel = playerViewModel,
-                context = context
-            )
-
-            if (!isTabletLandscape) {
-                MainBottomBar(
-                    navController = navController,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .offset {
-                            if (navigationBarHeight == 0.dp) {
-                                IntOffset(
-                                    x = 0,
-                                    y = (bottomInset + NavigationBarHeight).roundToPx(),
-                                )
-                            } else {
-                                val slideOffset =
-                                    (bottomInset + NavigationBarHeight) *
-                                            playerBottomSheetState.progress.coerceIn(
-                                                0f,
-                                                1f,
-                                            )
-                                val hideOffset =
-                                    (bottomInset + NavigationBarHeight) * (1 - navigationBarHeight / NavigationBarHeight)
-                                IntOffset(
-                                    x = 0,
-                                    y = (slideOffset + hideOffset).roundToPx(),
-                                )
+                    // 监听导航变化以折叠播放器
+                    LaunchedEffect(navBackStackEntry) {
+                        navBackStackEntry?.let {
+                            if (playerBottomSheetState.isExpanded) {
+                                playerBottomSheetState.collapseSoft()
                             }
                         }
-                        .navigationBarsPadding()
+                    }
+                }
+
+                BottomSheetPlayer(
+                    state = playerBottomSheetState,
+                    navController = navController,
+                    playerViewModel = playerViewModel,
+                    context = context
                 )
+
+                if (!isTabletLandscape) {
+                    MainBottomBar(
+                        navController = navController,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset {
+                                if (navigationBarHeight == 0.dp) {
+                                    IntOffset(
+                                        x = 0,
+                                        y = (bottomInset + NavigationBarHeight).roundToPx(),
+                                    )
+                                } else {
+                                    val slideOffset =
+                                        (bottomInset + NavigationBarHeight) *
+                                                playerBottomSheetState.progress.coerceIn(
+                                                    0f,
+                                                    1f,
+                                                )
+                                    val hideOffset =
+                                        (bottomInset + NavigationBarHeight) * (1 - navigationBarHeight / NavigationBarHeight)
+                                    IntOffset(
+                                        x = 0,
+                                        y = (slideOffset + hideOffset).roundToPx(),
+                                    )
+                                }
+                            }
+                            .navigationBarsPadding()
+                    )
+                }
             }
 
-        }
-
-        if (showNewYearFireworks) {
-            NewYearFireworksOverlay(
-                modifier = Modifier.fillMaxSize()
-            )
+            if (showNewYearFireworks) {
+                NewYearFireworksOverlay(
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }

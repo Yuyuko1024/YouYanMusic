@@ -1,6 +1,7 @@
 package com.youyuan.music.compose.ui.player
 
 import android.annotation.SuppressLint
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -79,6 +80,7 @@ fun LyricsPager(
     val currentPositionState = playerViewModel.currentPosition.collectAsState()
     val isPlayingState = playerViewModel.isPlaying.collectAsState()
     val durationState = playerViewModel.duration.collectAsState()
+    val localContext = LocalContext.current
 
     val uiColor = LocalPlayerUIColor.current
 
@@ -95,7 +97,6 @@ fun LyricsPager(
     }
 
     var anchorState by remember { mutableStateOf(0L to 0L) }
-
     val currentPosition = currentPositionState.value
     LaunchedEffect(currentPosition) {
         anchorState = currentPosition to System.currentTimeMillis()
@@ -171,6 +172,8 @@ fun LyricsPager(
             }
 
             parsedLyrics?.let { syncedLyrics ->
+                val shareLines = buildShareLyricLines(syncedLyrics)
+
                 if (syncedLyrics.lines.isNotEmpty()) {
                     KaraokeLyricsView(
                         listState = listState,
@@ -180,7 +183,21 @@ fun LyricsPager(
                             playerViewModel.seekTo(line.start.toLong())
                         },
                         onLinePressed = { line ->
-                            // 可以在这里添加长按功能，比如分享歌词等
+                            val matchedLine = shareLines.minByOrNull {
+                                abs(it.start - line.start)
+                            }
+                            if (matchedLine != null) {
+                                playerViewModel.showLyricsShareOverlay(
+                                    lyrics = syncedLyrics,
+                                    initialLineStart = matchedLine.start
+                                )
+                            } else {
+                                Toast.makeText(
+                                    localContext,
+                                    "当前歌词类型暂不支持分享",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                             Logger.debug("LyricsPager", "长按歌词行: ${line.start}")
                         },
                         normalLineTextStyle = SaltTheme.textStyles.paragraph,

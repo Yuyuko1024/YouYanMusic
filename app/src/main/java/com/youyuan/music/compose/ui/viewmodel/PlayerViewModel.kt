@@ -11,6 +11,7 @@ import androidx.media3.common.util.UnstableApi
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.api.ApiClient
 import com.youyuan.music.compose.api.apis.AlbumApi
@@ -77,6 +78,11 @@ class PlayerViewModel @Inject constructor(
     private val playlistInvalidationBus: PlaylistInvalidationBus,
     private val settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
+    data class LyricsShareOverlayState(
+        val lyrics: SyncedLyrics,
+        val initialLineStart: Int,
+    )
+
     companion object {
         const val TAG = "PlayerViewModel"
         private const val MAX_PERSISTED_PLAYLIST_SIZE = 500
@@ -163,11 +169,26 @@ class PlayerViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _lyricsShareOverlayState = MutableStateFlow<LyricsShareOverlayState?>(null)
+    val lyricsShareOverlayState: StateFlow<LyricsShareOverlayState?> =
+        _lyricsShareOverlayState.asStateFlow()
+
     private val _isCurrentSongLiked = MutableStateFlow(false)
     val isCurrentSongLiked: StateFlow<Boolean> = _isCurrentSongLiked.asStateFlow()
 
     fun consumeError() {
         _error.value = null
+    }
+
+    fun showLyricsShareOverlay(lyrics: SyncedLyrics, initialLineStart: Int) {
+        _lyricsShareOverlayState.value = LyricsShareOverlayState(
+            lyrics = lyrics,
+            initialLineStart = initialLineStart
+        )
+    }
+
+    fun dismissLyricsShareOverlay() {
+        _lyricsShareOverlayState.value = null
     }
 
     val playlist: StateFlow<List<PlayerPlaylistManager.PlaylistItem>> =
