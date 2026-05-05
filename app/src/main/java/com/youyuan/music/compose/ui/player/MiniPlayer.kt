@@ -254,6 +254,8 @@ private fun PlayerControls(
 
     // 播放状态
     val isPlaying by playerViewModel.isPlaying.collectAsState()
+    // 是否在缓冲
+    val isBuffering = playerViewModel.isBuffering.collectAsState().value
 
     Row(modifier = modifier) {
         // 播放按钮
@@ -268,21 +270,32 @@ private fun PlayerControls(
                     playerViewModel.togglePlayPause()
                 }
             )
-            CircularProgressIndicator(
-                progress = {
-                    if (duration > 0) {
-                        currentPosition.toFloat() / duration.toFloat()
-                    } else {
-                        0f
-                    }
-                },
-                modifier = Modifier
-                    .size(36.dp)
-                    .align(Alignment.Center),
-                color = SaltTheme.colors.highlight,
-                strokeWidth = 3.dp,
-                trackColor = SaltTheme.colors.subBackground,
-            )
+            if (isBuffering) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .align(Alignment.Center),
+                    color = SaltTheme.colors.highlight,
+                    strokeWidth = 3.dp,
+                    trackColor = SaltTheme.colors.subBackground,
+                )
+            } else {
+                CircularProgressIndicator(
+                    progress = {
+                        if (duration > 0) {
+                            currentPosition.toFloat() / duration.toFloat()
+                        } else {
+                            0f
+                        }
+                    },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .align(Alignment.Center),
+                    color = SaltTheme.colors.highlight,
+                    strokeWidth = 3.dp,
+                    trackColor = SaltTheme.colors.subBackground,
+                )
+            }
         }
         // 播放列表按钮
         Box(

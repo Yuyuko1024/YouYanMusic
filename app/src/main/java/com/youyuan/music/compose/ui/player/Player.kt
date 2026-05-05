@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -154,6 +155,8 @@ fun BottomSheetPlayer(
 
     // 播放状态
     val isPlaying = playerViewModel.isPlaying.collectAsState().value
+    // 缓冲状态
+    val isBuffering = playerViewModel.isBuffering.collectAsState().value
 
     // 循环/随机模式
     val repeatMode = playerViewModel.repeatMode.collectAsState().value
@@ -373,6 +376,7 @@ fun BottomSheetPlayer(
                                     verticalPagerState = verticalPagerState,
                                     currentArtworkUrl = currentArtworkUrl,
                                     isPlaying = isPlaying,
+                                    isBuffering = isBuffering,
                                     playerCoverType = playerCoverType,
                                     title = title,
                                     artistName = artistName,
@@ -432,6 +436,7 @@ private fun ExpandedPlayerMainPage(
     verticalPagerState: PagerState,
     currentArtworkUrl: String?,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     playerCoverType: Int,
     title: String,
     artistName: String,
@@ -559,6 +564,7 @@ private fun ExpandedPlayerMainPage(
                             duration = duration,
                             isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
                             isPlaying = isPlaying,
+                            isBuffering = isBuffering,
                             repeatMode = repeatMode,
                             shuffleModeEnabled = shuffleModeEnabled,
                             onSliderPositionChange = onSliderPositionChange,
@@ -614,6 +620,7 @@ private fun ExpandedPlayerMainPage(
                     duration = duration,
                     isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
                     isPlaying = isPlaying,
+                    isBuffering = isBuffering,
                     repeatMode = repeatMode,
                     shuffleModeEnabled = shuffleModeEnabled,
                     onSliderPositionChange = onSliderPositionChange,
@@ -655,6 +662,7 @@ private fun PlayerControlsSection(
     duration: Long,
     isPlayerSquigglyWaveEnabled: Boolean,
     isPlaying: Boolean,
+    isBuffering: Boolean,
     repeatMode: Int,
     shuffleModeEnabled: Boolean,
     onSliderPositionChange: (Long?) -> Unit,
@@ -823,14 +831,23 @@ private fun PlayerControlsSection(
                 onClick = onSkipToPrevious,
             )
 
-            ResizableIconButton(
-                icon = if (isPlaying) TablerIcons.PlayerPause else TablerIcons.PlayerPlay,
-                color = LocalPlayerUIColor.current,
-                modifier = Modifier
-                    .size(42.dp)
-                    .padding(4.dp),
-                onClick = onTogglePlayPause,
-            )
+            if (isBuffering) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .padding(4.dp),
+                    color = SaltTheme.colors.highlight
+                )
+            } else {
+                ResizableIconButton(
+                    icon = if (isPlaying) TablerIcons.PlayerPause else TablerIcons.PlayerPlay,
+                    color = LocalPlayerUIColor.current,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .padding(4.dp),
+                    onClick = onTogglePlayPause,
+                )
+            }
 
             ResizableIconButton(
                 icon = FeatherIcons.SkipForward,
