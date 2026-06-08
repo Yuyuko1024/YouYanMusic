@@ -81,15 +81,20 @@ fun CoverPager(
                         .scale(1f)
                         .clip(RoundedCornerShape(16.dp)),
                 ) {
-                    AcrylicFlipAsyncImage(
-                        imageUrl = artworkUrl,
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(artworkUrl ?: R.drawable.ic_nav_music)
+                            .crossfade(true)
+                            .crossfade(1000)
+                            .error(R.drawable.ic_nav_music) // 错误时使用占位图
+                            .fallback(R.drawable.ic_nav_music) // URI为null时使用占位图
+                            .build(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1f)
                             .scale(1f),
-                        contentDescription = "Cover art",
-                        contentScale = ContentScale.Crop,
-                        shape = RoundedCornerShape(16.dp),
+                        contentDescription = "Cover Art",
+                        contentScale = ContentScale.Crop
                     )
                 }
             }

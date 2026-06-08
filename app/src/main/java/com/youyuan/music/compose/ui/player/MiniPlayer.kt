@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -38,12 +40,18 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.error
+import coil3.request.fallback
 import com.moriafly.salt.ui.Icon
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
@@ -182,12 +190,20 @@ fun MiniPlayer(
                     .clip(RoundedCornerShape(8.dp))
                     .align(Alignment.CenterVertically),
             ) {
-                AcrylicFlipAsyncImage(
-                    imageUrl = currentArtworkUrl,
-                    modifier = Modifier.fillMaxSize(),
-                    contentDescription = "Cover art",
-                    contentScale = ContentScale.Crop,
-                    shape = RoundedCornerShape(8.dp),
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(currentArtworkUrl ?: R.drawable.ic_nav_music)
+                        .crossfade(true)
+                        .crossfade(1000)
+                        .error(R.drawable.ic_nav_music) // 错误时使用占位图
+                        .fallback(R.drawable.ic_nav_music) // URI为null时使用占位图
+                        .build(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .scale(1f),
+                    contentDescription = currentSong?.name,
+                    contentScale = ContentScale.Crop
                 )
             }
             Spacer(
