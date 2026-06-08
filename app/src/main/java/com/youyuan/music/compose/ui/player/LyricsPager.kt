@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImage
@@ -73,9 +74,9 @@ fun LyricsPager(
 ) {
     val parsedLyrics = playerViewModel.parsedLyrics.collectAsState().value
     val currentPlaying = playerViewModel.currentMediaItem.collectAsState().value
-    val currentPositionState = playerViewModel.currentPosition.collectAsState()
+    val currentPositionState = playerViewModel.currentPosition.collectAsStateWithLifecycle()
     val isPlayingState = playerViewModel.isPlaying.collectAsState()
-    val durationState = playerViewModel.duration.collectAsState()
+    val durationState = playerViewModel.duration.collectAsStateWithLifecycle()
     val localContext = LocalContext.current
 
     val uiColor = LocalPlayerUIColor.current

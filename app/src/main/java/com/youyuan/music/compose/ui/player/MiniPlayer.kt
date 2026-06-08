@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import com.moriafly.salt.ui.Icon
 import com.moriafly.salt.ui.SaltTheme
@@ -249,8 +250,8 @@ private fun PlayerControls(
     onPlaylistClick: () -> Unit = {}
 ) {
     // 进度
-    val currentPosition by playerViewModel.currentPosition.collectAsState()
-    val duration by playerViewModel.duration.collectAsState()
+    val currentPosition by playerViewModel.currentPosition.collectAsStateWithLifecycle()
+    val duration by playerViewModel.duration.collectAsStateWithLifecycle()
 
     // 播放状态
     val isPlaying by playerViewModel.isPlaying.collectAsState()

@@ -49,6 +49,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
@@ -142,8 +143,8 @@ fun BottomSheetPlayer(
     val artistName = playerViewModel.currentArtistNames.collectAsState().value
 
     // 进度
-    val currentPosition = playerViewModel.currentPosition.collectAsState().value
-    val duration = playerViewModel.duration.collectAsState().value
+    val currentPosition = playerViewModel.currentPosition.collectAsStateWithLifecycle().value
+    val duration = playerViewModel.duration.collectAsStateWithLifecycle().value
 
     // 设置数据存储
     val settingsDataStore = remember { SettingsDataStore(context) }
