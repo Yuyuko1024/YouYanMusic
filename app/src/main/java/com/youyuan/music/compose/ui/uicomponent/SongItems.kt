@@ -76,7 +76,7 @@ fun SongItem(
                     .size(50.dp)
                     .clip(RoundedCornerShape(4.dp))
                     .align(Alignment.CenterVertically),
-                contentDescription = "Album Art",
+                contentDescription = "${song.al?.name}",
                 contentScale = ContentScale.Crop
             )
 
