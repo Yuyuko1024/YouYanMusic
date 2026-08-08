@@ -6,27 +6,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 歌单详情缓存：用于避免同一个 playlistId 反复请求 /playlist/detail。
- *
- * - 只缓存元信息 + trackIds（SongDetail 由 SongDetailPool 负责缓存）
+ * 进程级 PlaylistDetail 缓存，供 PlaylistRepo 和 ProfileViewModel 共用。
  */
 @Singleton
 class PlaylistDetailCache @Inject constructor() {
 
-    private val map = ConcurrentHashMap<Long, PlaylistDetail>()
+    private val cache = ConcurrentHashMap<Long, PlaylistDetail>()
 
-    fun get(playlistId: Long): PlaylistDetail? = map[playlistId]
-
-    fun put(detail: PlaylistDetail) {
-        val id = detail.id ?: return
-        map[id] = detail
-    }
-
-    fun clear(playlistId: Long) {
-        map.remove(playlistId)
-    }
-
-    fun clearAll() {
-        map.clear()
-    }
+    fun get(id: Long): PlaylistDetail? = cache[id]
+    fun put(detail: PlaylistDetail) { detail.id?.let { cache[it] = detail } }
+    fun clear(id: Long) { cache.remove(id) }
 }

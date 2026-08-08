@@ -35,7 +35,6 @@ import com.youyuan.music.compose.R
 import com.youyuan.music.compose.constants.PlayerCoverVerticalPadding
 import com.youyuan.music.compose.constants.PlayerHorizontalPadding
 import com.youyuan.music.compose.pref.PlayerCoverType
-import com.youyuan.music.compose.ui.uicomponent.AcrylicFlipAsyncImage
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable

@@ -1,115 +1,119 @@
 package com.youyuan.music.compose.ui.viewmodel
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.youyuan.music.compose.api.ApiClient
-import com.youyuan.music.compose.api.apis.BannerApi
-import com.youyuan.music.compose.api.apis.HomeApi
-import com.youyuan.music.compose.api.apis.PersonalFmApi
-import com.youyuan.music.compose.api.apis.RecommendApi
 import com.youyuan.music.compose.api.model.BannerItem
-import com.youyuan.music.compose.api.model.PersonalFmSong
 import com.youyuan.music.compose.api.model.PersonalizedNewSongItem
 import com.youyuan.music.compose.api.model.PersonalizedPlaylistItem
 import com.youyuan.music.compose.api.model.RecommendResourceItem
-import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.api.model.ToplistItem
-import com.youyuan.music.compose.utils.Logger
+import com.youyuan.music.compose.data.model.SongItem
+import com.youyuan.music.compose.data.repo.ExploreRepo
+import com.youyuan.music.compose.data.repo.RepoRiskException
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * 探索页 ViewModel —— 精简版。
+ * 网络逻辑全部下沉到 ExploreRepo，VM 只管理各数据段的加载态、防重复、
+ * 登录态关联清空。
+ */
 @HiltViewModel
 class ExploreViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val apiClient: ApiClient
+    private val exploreRepo: ExploreRepo,
 ) : ViewModel() {
-    private val bannerApi: BannerApi = apiClient.createService(BannerApi::class.java)
-    private val homeApi: HomeApi = apiClient.createService(HomeApi::class.java)
-    private val recommendApi: RecommendApi = apiClient.createService(RecommendApi::class.java)
-    private val personalFmApi: PersonalFmApi = apiClient.createService(PersonalFmApi::class.java)
+
+    // ============================================================
+    // Banner
+    // ============================================================
 
     private val _banners = MutableStateFlow<List<BannerItem>>(emptyList())
     val banners: StateFlow<List<BannerItem>> = _banners.asStateFlow()
-
     private val _bannerLoading = MutableStateFlow(false)
     val bannerLoading: StateFlow<Boolean> = _bannerLoading.asStateFlow()
-
     private val _bannerError = MutableStateFlow<String?>(null)
     val bannerError: StateFlow<String?> = _bannerError.asStateFlow()
 
-    private val _dailyRecommendPlaylists =
-        MutableStateFlow<List<RecommendResourceItem>>(emptyList())
-    val dailyRecommendPlaylists: StateFlow<List<RecommendResourceItem>> =
-        _dailyRecommendPlaylists.asStateFlow()
+    // ============================================================
+    // 推荐歌单
+    // ============================================================
 
-    private val _dailyRecommendPlaylistsLoading = MutableStateFlow(false)
-    val dailyRecommendPlaylistsLoading: StateFlow<Boolean> =
-        _dailyRecommendPlaylistsLoading.asStateFlow()
-
-    private val _dailyRecommendPlaylistsError = MutableStateFlow<String?>(null)
-    val dailyRecommendPlaylistsError: StateFlow<String?> =
-        _dailyRecommendPlaylistsError.asStateFlow()
-
-    private val _dailyRecommendSongs = MutableStateFlow<List<SongDetail>>(emptyList())
-    val dailyRecommendSongs: StateFlow<List<SongDetail>> = _dailyRecommendSongs.asStateFlow()
-
-    private val _dailyRecommendSongsLoading = MutableStateFlow(false)
-    val dailyRecommendSongsLoading: StateFlow<Boolean> = _dailyRecommendSongsLoading.asStateFlow()
-
-    private val _dailyRecommendSongsError = MutableStateFlow<String?>(null)
-    val dailyRecommendSongsError: StateFlow<String?> = _dailyRecommendSongsError.asStateFlow()
-
-    private val _personalFmSongs = MutableStateFlow<List<PersonalFmSong>>(emptyList())
-    val personalFmSongs: StateFlow<List<PersonalFmSong>> = _personalFmSongs.asStateFlow()
-
-    private val _personalFmSongsLoading = MutableStateFlow(false)
-    val personalFmSongsLoading: StateFlow<Boolean> = _personalFmSongsLoading.asStateFlow()
-
-    private val _personalFmSongsError = MutableStateFlow<String?>(null)
-    val personalFmSongsError: StateFlow<String?> = _personalFmSongsError.asStateFlow()
-
-    private val _personalizedPlaylists =
-        MutableStateFlow<List<PersonalizedPlaylistItem>>(emptyList())
-    val personalizedPlaylists: StateFlow<List<PersonalizedPlaylistItem>> =
-        _personalizedPlaylists.asStateFlow()
-
+    private val _personalizedPlaylists = MutableStateFlow<List<PersonalizedPlaylistItem>>(emptyList())
+    val personalizedPlaylists: StateFlow<List<PersonalizedPlaylistItem>> = _personalizedPlaylists.asStateFlow()
     private val _personalizedPlaylistsLoading = MutableStateFlow(false)
-    val personalizedPlaylistsLoading: StateFlow<Boolean> =
-        _personalizedPlaylistsLoading.asStateFlow()
-
+    val personalizedPlaylistsLoading: StateFlow<Boolean> = _personalizedPlaylistsLoading.asStateFlow()
     private val _personalizedPlaylistsError = MutableStateFlow<String?>(null)
     val personalizedPlaylistsError: StateFlow<String?> = _personalizedPlaylistsError.asStateFlow()
 
-    private val _personalizedNewSongs = MutableStateFlow<List<PersonalizedNewSongItem>>(emptyList())
-    val personalizedNewSongs: StateFlow<List<PersonalizedNewSongItem>> =
-        _personalizedNewSongs.asStateFlow()
+    // ============================================================
+    // 新歌推荐
+    // ============================================================
 
+    private val _personalizedNewSongs = MutableStateFlow<List<PersonalizedNewSongItem>>(emptyList())
+    val personalizedNewSongs: StateFlow<List<PersonalizedNewSongItem>> = _personalizedNewSongs.asStateFlow()
     private val _personalizedNewSongsLoading = MutableStateFlow(false)
     val personalizedNewSongsLoading: StateFlow<Boolean> = _personalizedNewSongsLoading.asStateFlow()
-
     private val _personalizedNewSongsError = MutableStateFlow<String?>(null)
     val personalizedNewSongsError: StateFlow<String?> = _personalizedNewSongsError.asStateFlow()
 
+    // ============================================================
+    // 榜单
+    // ============================================================
+
     private val _toplists = MutableStateFlow<List<ToplistItem>>(emptyList())
     val toplists: StateFlow<List<ToplistItem>> = _toplists.asStateFlow()
-
     private val _toplistsLoading = MutableStateFlow(false)
     val toplistsLoading: StateFlow<Boolean> = _toplistsLoading.asStateFlow()
-
     private val _toplistsError = MutableStateFlow<String?>(null)
     val toplistsError: StateFlow<String?> = _toplistsError.asStateFlow()
 
-    // 避免“切页面/重组”造成重复请求：
-    // - public：不依赖登录的内容（banner/推荐歌单/新歌/榜单）
-    // - login：依赖登录态的内容（每日推荐/私人FM）
+    // ============================================================
+    // 每日推荐歌单（需登录）
+    // ============================================================
+
+    private val _dailyRecommendPlaylists = MutableStateFlow<List<RecommendResourceItem>>(emptyList())
+    val dailyRecommendPlaylists: StateFlow<List<RecommendResourceItem>> = _dailyRecommendPlaylists.asStateFlow()
+    private val _dailyRecommendPlaylistsLoading = MutableStateFlow(false)
+    val dailyRecommendPlaylistsLoading: StateFlow<Boolean> = _dailyRecommendPlaylistsLoading.asStateFlow()
+    private val _dailyRecommendPlaylistsError = MutableStateFlow<String?>(null)
+    val dailyRecommendPlaylistsError: StateFlow<String?> = _dailyRecommendPlaylistsError.asStateFlow()
+
+    // ============================================================
+    // 每日推荐歌曲（需登录）
+    // ============================================================
+
+    private val _dailyRecommendSongs = MutableStateFlow<List<SongItem>>(emptyList())
+    val dailyRecommendSongs: StateFlow<List<SongItem>> = _dailyRecommendSongs.asStateFlow()
+    private val _dailyRecommendSongsLoading = MutableStateFlow(false)
+    val dailyRecommendSongsLoading: StateFlow<Boolean> = _dailyRecommendSongsLoading.asStateFlow()
+    private val _dailyRecommendSongsError = MutableStateFlow<String?>(null)
+    val dailyRecommendSongsError: StateFlow<String?> = _dailyRecommendSongsError.asStateFlow()
+
+    // ============================================================
+    // 私人 FM（需登录）
+    // ============================================================
+
+    private val _personalFmSongs = MutableStateFlow<List<SongItem>>(emptyList())
+    val personalFmSongs: StateFlow<List<SongItem>> = _personalFmSongs.asStateFlow()
+    private val _personalFmSongsLoading = MutableStateFlow(false)
+    val personalFmSongsLoading: StateFlow<Boolean> = _personalFmSongsLoading.asStateFlow()
+    private val _personalFmSongsError = MutableStateFlow<String?>(null)
+    val personalFmSongsError: StateFlow<String?> = _personalFmSongsError.asStateFlow()
+
+    // ============================================================
+    // 防重复加载
+    // ============================================================
+
     private var autoLoadedPublicKey: String? = null
     private var autoLoadedLoginKey: String? = null
+
+    // ============================================================
+    // 登录态变化
+    // ============================================================
 
     fun onLoginStateChanged(isLoggedIn: Boolean) {
         if (!isLoggedIn) {
@@ -118,45 +122,36 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
+    // ============================================================
+    // 自动加载 & 全量刷新
+    // ============================================================
+
     fun clearAllContent() {
-        _banners.value = emptyList()
-        _bannerLoading.value = false
-        _bannerError.value = null
-
-        _personalizedPlaylists.value = emptyList()
-        _personalizedPlaylistsLoading.value = false
-        _personalizedPlaylistsError.value = null
-
-        _personalizedNewSongs.value = emptyList()
-        _personalizedNewSongsLoading.value = false
-        _personalizedNewSongsError.value = null
-
-        _toplists.value = emptyList()
-        _toplistsLoading.value = false
-        _toplistsError.value = null
-
+        _banners.value = emptyList(); _bannerLoading.value = false; _bannerError.value = null
+        _personalizedPlaylists.value = emptyList(); _personalizedPlaylistsLoading.value = false; _personalizedPlaylistsError.value = null
+        _personalizedNewSongs.value = emptyList(); _personalizedNewSongsLoading.value = false; _personalizedNewSongsError.value = null
+        _toplists.value = emptyList(); _toplistsLoading.value = false; _toplistsError.value = null
         clearLoginOnlyContent()
-
         autoLoadedPublicKey = null
         autoLoadedLoginKey = null
     }
 
-    /**
-     * 冷启动自动加载（只执行一次/每个 baseUrlKey 一次）。
-     * baseUrlKey 用于区分 API endpoint（例如切换服务器后应重新拉取）。
-     */
+    fun clearLoginOnlyContent() {
+        _dailyRecommendPlaylists.value = emptyList(); _dailyRecommendPlaylistsLoading.value = false; _dailyRecommendPlaylistsError.value = null
+        _dailyRecommendSongs.value = emptyList(); _dailyRecommendSongsLoading.value = false; _dailyRecommendSongsError.value = null
+        _personalFmSongs.value = emptyList(); _personalFmSongsLoading.value = false; _personalFmSongsError.value = null
+    }
+
+    /** 冷启动自动加载：同一 endpoint 只执行一次，已在内存则不重复 */
     fun ensureAutoLoaded(baseUrlKey: String, isLoggedIn: Boolean) {
         if (baseUrlKey.isBlank()) return
 
-        // 若 endpoint 变化，先清空旧数据，避免 UI 展示“旧服务器的缓存”。
-        val currentKey = autoLoadedPublicKey
-        if (currentKey != null && currentKey != baseUrlKey) {
+        if (autoLoadedPublicKey != null && autoLoadedPublicKey != baseUrlKey) {
             clearAllContent()
         }
 
         if (autoLoadedPublicKey != baseUrlKey) {
             autoLoadedPublicKey = baseUrlKey
-            // 非 force：已有数据则各 loadXxx 会自行短路
             loadBanner(type = 2, force = false)
             loadPersonalizedPlaylists(limit = 10, force = false)
             loadPersonalizedNewSongs(limit = 10, force = false)
@@ -171,15 +166,11 @@ class ExploreViewModel @Inject constructor(
                 loadPersonalFm(isLoggedIn = true, force = false)
             }
         } else {
-            // 未登录：确保登录态内容为空
             clearLoginOnlyContent()
             autoLoadedLoginKey = null
         }
     }
 
-    /**
-     * 用户手动刷新入口：显式 force=true。
-     */
     fun refreshAll(isLoggedIn: Boolean) {
         loadBanner(type = 2, force = true)
         loadPersonalizedPlaylists(limit = 10, force = true)
@@ -194,39 +185,21 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun clearLoginOnlyContent() {
-        _dailyRecommendPlaylists.value = emptyList()
-        _dailyRecommendPlaylistsLoading.value = false
-        _dailyRecommendPlaylistsError.value = null
-
-        _dailyRecommendSongs.value = emptyList()
-        _dailyRecommendSongsLoading.value = false
-        _dailyRecommendSongsError.value = null
-
-        _personalFmSongs.value = emptyList()
-        _personalFmSongsLoading.value = false
-        _personalFmSongsError.value = null
-    }
+    // ============================================================
+    // 各数据段加载方法
+    // ============================================================
 
     fun loadBanner(type: Int = 2, force: Boolean = false) {
         if (_bannerLoading.value) return
         if (!force && _banners.value.isNotEmpty()) return
-
         viewModelScope.launch {
-            _bannerLoading.value = true
-            _bannerError.value = null
+            _bannerLoading.value = true; _bannerError.value = null
             try {
-                val resp = bannerApi.getBanner(type = type)
-                if (resp.code == 200) {
-                    _banners.value = resp.banners ?: emptyList()
-                } else {
-                    _banners.value = emptyList()
-                    _bannerError.value = "banner 接口返回异常 code=${resp.code}"
-                }
+                _banners.value = exploreRepo.getBanner(type)
+            } catch (e: RepoRiskException) {
+                _bannerError.value = e.message
             } catch (e: Exception) {
-                _banners.value = emptyList()
                 _bannerError.value = e.message ?: "banner 请求失败"
-                Logger.debug("ExploreViewModel", "loadBanner failed: ${e.message}")
             } finally {
                 _bannerLoading.value = false
             }
@@ -236,23 +209,14 @@ class ExploreViewModel @Inject constructor(
     fun loadPersonalizedPlaylists(limit: Int = 10, force: Boolean = false) {
         if (_personalizedPlaylistsLoading.value) return
         if (!force && _personalizedPlaylists.value.isNotEmpty()) return
-
         viewModelScope.launch {
-            _personalizedPlaylistsLoading.value = true
-            _personalizedPlaylistsError.value = null
+            _personalizedPlaylistsLoading.value = true; _personalizedPlaylistsError.value = null
             try {
-                val resp = homeApi.getPersonalized(limit = limit)
-                if (resp.code == 200) {
-                    _personalizedPlaylists.value = resp.result.orEmpty()
-                } else {
-                    _personalizedPlaylists.value = emptyList()
-                    _personalizedPlaylistsError.value =
-                        "personalized 接口返回异常 code=${resp.code}"
-                }
+                _personalizedPlaylists.value = exploreRepo.getPersonalizedPlaylists(limit)
+            } catch (e: RepoRiskException) {
+                _personalizedPlaylistsError.value = e.message
             } catch (e: Exception) {
-                _personalizedPlaylists.value = emptyList()
-                _personalizedPlaylistsError.value = e.message ?: "personalized 请求失败"
-                Logger.debug("ExploreViewModel", "loadPersonalizedPlaylists failed: ${e.message}")
+                _personalizedPlaylistsError.value = e.message ?: "推荐歌单请求失败"
             } finally {
                 _personalizedPlaylistsLoading.value = false
             }
@@ -262,23 +226,14 @@ class ExploreViewModel @Inject constructor(
     fun loadPersonalizedNewSongs(limit: Int = 10, force: Boolean = false) {
         if (_personalizedNewSongsLoading.value) return
         if (!force && _personalizedNewSongs.value.isNotEmpty()) return
-
         viewModelScope.launch {
-            _personalizedNewSongsLoading.value = true
-            _personalizedNewSongsError.value = null
+            _personalizedNewSongsLoading.value = true; _personalizedNewSongsError.value = null
             try {
-                val resp = homeApi.getPersonalizedNewSong(limit = limit)
-                if (resp.code == 200) {
-                    _personalizedNewSongs.value = resp.result.orEmpty()
-                } else {
-                    _personalizedNewSongs.value = emptyList()
-                    _personalizedNewSongsError.value =
-                        "personalized/newsong 接口返回异常 code=${resp.code}"
-                }
+                _personalizedNewSongs.value = exploreRepo.getPersonalizedNewSongs(limit)
+            } catch (e: RepoRiskException) {
+                _personalizedNewSongsError.value = e.message
             } catch (e: Exception) {
-                _personalizedNewSongs.value = emptyList()
-                _personalizedNewSongsError.value = e.message ?: "personalized/newsong 请求失败"
-                Logger.debug("ExploreViewModel", "loadPersonalizedNewSongs failed: ${e.message}")
+                _personalizedNewSongsError.value = e.message ?: "新歌推荐请求失败"
             } finally {
                 _personalizedNewSongsLoading.value = false
             }
@@ -288,22 +243,14 @@ class ExploreViewModel @Inject constructor(
     fun loadToplistDetail(force: Boolean = false) {
         if (_toplistsLoading.value) return
         if (!force && _toplists.value.isNotEmpty()) return
-
         viewModelScope.launch {
-            _toplistsLoading.value = true
-            _toplistsError.value = null
+            _toplistsLoading.value = true; _toplistsError.value = null
             try {
-                val resp = homeApi.getToplistDetail()
-                if (resp.code == 200) {
-                    _toplists.value = resp.list.orEmpty()
-                } else {
-                    _toplists.value = emptyList()
-                    _toplistsError.value = "toplist/detail 接口返回异常 code=${resp.code}"
-                }
+                _toplists.value = exploreRepo.getToplistDetail()
+            } catch (e: RepoRiskException) {
+                _toplistsError.value = e.message
             } catch (e: Exception) {
-                _toplists.value = emptyList()
-                _toplistsError.value = e.message ?: "toplist/detail 请求失败"
-                Logger.debug("ExploreViewModel", "loadToplistDetail failed: ${e.message}")
+                _toplistsError.value = e.message ?: "榜单请求失败"
             } finally {
                 _toplistsLoading.value = false
             }
@@ -311,29 +258,17 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun loadDailyRecommendPlaylists(isLoggedIn: Boolean, force: Boolean = false) {
-        if (!isLoggedIn) {
-            clearLoginOnlyContent()
-            return
-        }
+        if (!isLoggedIn) { clearLoginOnlyContent(); return }
         if (_dailyRecommendPlaylistsLoading.value) return
         if (!force && _dailyRecommendPlaylists.value.isNotEmpty()) return
-
         viewModelScope.launch {
-            _dailyRecommendPlaylistsLoading.value = true
-            _dailyRecommendPlaylistsError.value = null
+            _dailyRecommendPlaylistsLoading.value = true; _dailyRecommendPlaylistsError.value = null
             try {
-                val resp = recommendApi.getRecommendPlaylists()
-                if (resp.code == 200) {
-                    _dailyRecommendPlaylists.value = resp.recommend.orEmpty()
-                } else {
-                    _dailyRecommendPlaylists.value = emptyList()
-                    _dailyRecommendPlaylistsError.value =
-                        "recommend/resource 接口返回异常 code=${resp.code}"
-                }
+                _dailyRecommendPlaylists.value = exploreRepo.getRecommendPlaylists()
+            } catch (e: RepoRiskException) {
+                _dailyRecommendPlaylistsError.value = e.message
             } catch (e: Exception) {
-                _dailyRecommendPlaylists.value = emptyList()
-                _dailyRecommendPlaylistsError.value = e.message ?: "recommend/resource 请求失败"
-                Logger.debug("ExploreViewModel", "loadDailyRecommendPlaylists failed: ${e.message}")
+                _dailyRecommendPlaylistsError.value = e.message ?: "每日推荐歌单请求失败"
             } finally {
                 _dailyRecommendPlaylistsLoading.value = false
             }
@@ -341,29 +276,17 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun loadDailyRecommendSongs(isLoggedIn: Boolean, force: Boolean = false) {
-        if (!isLoggedIn) {
-            clearLoginOnlyContent()
-            return
-        }
+        if (!isLoggedIn) { clearLoginOnlyContent(); return }
         if (_dailyRecommendSongsLoading.value) return
         if (!force && _dailyRecommendSongs.value.isNotEmpty()) return
-
         viewModelScope.launch {
-            _dailyRecommendSongsLoading.value = true
-            _dailyRecommendSongsError.value = null
+            _dailyRecommendSongsLoading.value = true; _dailyRecommendSongsError.value = null
             try {
-                val resp = recommendApi.getRecommendSongs()
-                if (resp.code == 200) {
-                    _dailyRecommendSongs.value = resp.data?.dailySongs.orEmpty()
-                } else {
-                    _dailyRecommendSongs.value = emptyList()
-                    _dailyRecommendSongsError.value =
-                        "recommend/songs 接口返回异常 code=${resp.code}"
-                }
+                _dailyRecommendSongs.value = exploreRepo.getRecommendSongs()
+            } catch (e: RepoRiskException) {
+                _dailyRecommendSongsError.value = e.message
             } catch (e: Exception) {
-                _dailyRecommendSongs.value = emptyList()
-                _dailyRecommendSongsError.value = e.message ?: "recommend/songs 请求失败"
-                Logger.debug("ExploreViewModel", "loadDailyRecommendSongs failed: ${e.message}")
+                _dailyRecommendSongsError.value = e.message ?: "每日推荐歌曲请求失败"
             } finally {
                 _dailyRecommendSongsLoading.value = false
             }
@@ -371,28 +294,17 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun loadPersonalFm(isLoggedIn: Boolean, force: Boolean = false) {
-        if (!isLoggedIn) {
-            clearLoginOnlyContent()
-            return
-        }
+        if (!isLoggedIn) { clearLoginOnlyContent(); return }
         if (_personalFmSongsLoading.value) return
         if (!force && _personalFmSongs.value.isNotEmpty()) return
-
         viewModelScope.launch {
-            _personalFmSongsLoading.value = true
-            _personalFmSongsError.value = null
+            _personalFmSongsLoading.value = true; _personalFmSongsError.value = null
             try {
-                val resp = personalFmApi.getPersonalFm()
-                if (resp.code == 200) {
-                    _personalFmSongs.value = resp.data.orEmpty()
-                } else {
-                    _personalFmSongs.value = emptyList()
-                    _personalFmSongsError.value = "personal_fm 接口返回异常 code=${resp.code}"
-                }
+                _personalFmSongs.value = exploreRepo.getPersonalFm()
+            } catch (e: RepoRiskException) {
+                _personalFmSongsError.value = e.message
             } catch (e: Exception) {
-                _personalFmSongs.value = emptyList()
-                _personalFmSongsError.value = e.message ?: "personal_fm 请求失败"
-                Logger.debug("ExploreViewModel", "loadPersonalFm failed: ${e.message}")
+                _personalFmSongsError.value = e.message ?: "私人FM请求失败"
             } finally {
                 _personalFmSongsLoading.value = false
             }

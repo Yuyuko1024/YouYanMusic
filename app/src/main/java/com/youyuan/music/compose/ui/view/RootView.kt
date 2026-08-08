@@ -2,6 +2,7 @@ package com.youyuan.music.compose.ui.view
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -85,6 +87,7 @@ import kotlinx.coroutines.launch
 @UnstableSaltUiApi
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
+@ExperimentalMaterial3ExpressiveApi
 @ExperimentalFoundationApi
 fun RootView(
     context: Activity,
@@ -142,10 +145,11 @@ fun RootView(
     val playerError by playerViewModel.error.collectAsState()
     val lyricsShareOverlayState by playerViewModel.lyricsShareOverlayState.collectAsState()
     val isPlaying by playerViewModel.isPlaying.collectAsState()
-    val currentPlayingSong by playerViewModel.currentSong.collectAsState()
+    val currentPlayingSong by playerViewModel.currentSongItem.collectAsState()
     val currentSongArtwork by playerViewModel.currentAlbumArtUrl.collectAsState()
 
     LaunchedEffect(playerError) {
+        Log.e("player","err while playing: $playerError")
         val message = playerError ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         playerViewModel.consumeError()

@@ -26,13 +26,13 @@ class SettingsDataStore(context: Context) {
 
         // 用户界面
         val APP_DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("app_dynamic_color_enabled")
-        val PLAYER_SQUIGGLY_WAVE_ENABLED = booleanPreferencesKey("player_squiggly_wave_enabled")
         val PLAYER_COVER_TYPE = intPreferencesKey("player_cover_type")
         val NEW_YEAR_THEME_ENABLED = booleanPreferencesKey("new_year_theme_enabled")
         val NEW_YEAR_FIREWORKS_ENABLED = booleanPreferencesKey("new_year_fireworks_enabled")
 
         // 播放器行为
         val PLAYER_SEEK_TO_PREVIOUS_ACTION = intPreferencesKey("player_seek_to_previous_action")
+        val PLAYER_COMBINED_SPEED_PITCH = booleanPreferencesKey("player_combined_speed_pitch")
 
         // 播放器音质（/song/url/v1 的 level）
         val PLAYER_AUDIO_QUALITY_LEVEL = stringPreferencesKey("player_audio_quality_level")
@@ -65,12 +65,6 @@ class SettingsDataStore(context: Context) {
             preferences[APP_DYNAMIC_COLOR_ENABLED] ?: false
         }
 
-    val isPlayerSquigglyWaveEnabled: Flow<Boolean> = dataStore.data
-        .map { preferences ->
-            // 默认启用
-            preferences[PLAYER_SQUIGGLY_WAVE_ENABLED] ?: true
-        }
-
     val playerCoverType: Flow<Int> = dataStore.data
         .map { preferences ->
             // 默认值为 0，即方形封面
@@ -101,6 +95,11 @@ class SettingsDataStore(context: Context) {
                 ?: PlayerSeekToPreviousAction.DEFAULT.ordinal
         }
 
+    val playerCombinedSpeedPitch: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[PLAYER_COMBINED_SPEED_PITCH] ?: false
+        }
+
     val playerAudioQualityLevel: Flow<String> = dataStore.data
         .map { preferences ->
             preferences[PLAYER_AUDIO_QUALITY_LEVEL] ?: AudioQualityLevel.default().level
@@ -129,12 +128,6 @@ class SettingsDataStore(context: Context) {
         }
     }
 
-    suspend fun setPlayerSquigglyWaveEnabled(isEnabled: Boolean) {
-        dataStore.edit { settings ->
-            settings[PLAYER_SQUIGGLY_WAVE_ENABLED] = isEnabled
-        }
-    }
-
     suspend fun setPlayerCoverType(type: PlayerCoverType) {
         dataStore.edit { settings ->
             settings[PLAYER_COVER_TYPE] = type.ordinal
@@ -157,6 +150,12 @@ class SettingsDataStore(context: Context) {
     suspend fun setPlayerSeekToPreviousAction(action: PlayerSeekToPreviousAction) {
         dataStore.edit { settings ->
             settings[PLAYER_SEEK_TO_PREVIOUS_ACTION] = action.ordinal
+        }
+    }
+
+    suspend fun setPlayerCombinedSpeedPitch(isEnabled: Boolean) {
+        dataStore.edit { settings ->
+            settings[PLAYER_COMBINED_SPEED_PITCH] = isEnabled
         }
     }
 

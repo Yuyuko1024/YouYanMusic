@@ -53,15 +53,14 @@ fun SettingsScreen(
 
     val settingsDataStore = remember { SettingsDataStore(context) }
     val isAppDynamicColorEnabled by settingsDataStore.appDynamicColorEnabled.collectAsState(initial = false)
-    val isPlayerSquigglyWaveEnabled by settingsDataStore.isPlayerSquigglyWaveEnabled.collectAsState(
-        initial = true
-    )
     val isNewYearThemeEnabled by settingsDataStore.newYearThemeEnabled.collectAsState(initial = true)
     val isNewYearFireworksEnabled by settingsDataStore.newYearFireworksEnabled.collectAsState(
         initial = true
     )
     val playerCoverType by settingsDataStore.playerCoverType
         .collectAsState(initial = PlayerCoverType.DEFAULT.ordinal)
+    val playerAudioQualityLevel by settingsDataStore.playerAudioQualityLevel
+        .collectAsState(initial = AudioQualityLevel.default().level)
     val downloadAudioQualityLevel by settingsDataStore.downloadAudioQualityLevel
         .collectAsState(initial = AudioQualityLevel.default().level)
     val isNewYearFestivalDay = remember { LunarNewYearUtils.isNewYearFestivalDay() }
@@ -81,6 +80,8 @@ fun SettingsScreen(
         stringResource(R.string.settings_action_restart)
     )
     val audioQualityLevels = AudioQualityLevel.entries
+    val playerQualityLabel = AudioQualityLevel.fromLevel(playerAudioQualityLevel)?.displayName
+        ?: AudioQualityLevel.default().displayName
     val downloadQualityLabel = AudioQualityLevel.fromLevel(downloadAudioQualityLevel)?.displayName
         ?: AudioQualityLevel.default().displayName
 
@@ -117,15 +118,6 @@ fun SettingsScreen(
                         onChange = { state ->
                             coroutineScope.launch {
                                 settingsDataStore.setAppDynamicColorEnabled(state)
-                            }
-                        }
-                    )
-                    ItemSwitcher(
-                        text = stringResource(R.string.settings_player_wave),
-                        state = isPlayerSquigglyWaveEnabled,
-                        onChange = { state ->
-                            coroutineScope.launch {
-                                settingsDataStore.setPlayerSquigglyWaveEnabled(state)
                             }
                         }
                     )
@@ -178,6 +170,7 @@ fun SettingsScreen(
                 ItemOuterTitle(text = stringResource(R.string.settings_player_behavior))
                 RoundedColumn {
                     val popupState = rememberPopupState()
+                    val playerQualityPopupState = rememberPopupState()
                     val downloadQualityPopupState = rememberPopupState()
                     // 上一曲行为的设置
                     val currentAction by settingsDataStore.playerSeekToPreviousAction
@@ -199,6 +192,25 @@ fun SettingsScreen(
                                         )
                                     }
                                     popupState.dismiss()
+                                }
+                            )
+                        }
+                    }
+
+                    ItemPopup(
+                        state = playerQualityPopupState,
+                        text = stringResource(R.string.settings_player_quality),
+                        sub = playerQualityLabel,
+                    ) {
+                        audioQualityLevels.forEach { quality ->
+                            PopupMenuItem(
+                                text = quality.displayName,
+                                selected = quality.level == playerAudioQualityLevel,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        settingsDataStore.setPlayerAudioQualityLevel(quality.level)
+                                    }
+                                    playerQualityPopupState.dismiss()
                                 }
                             )
                         }

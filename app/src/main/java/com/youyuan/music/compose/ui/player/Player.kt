@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
@@ -30,6 +32,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -42,8 +45,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,6 +59,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Surface
 import com.moriafly.salt.ui.Text
@@ -69,7 +78,6 @@ import com.youyuan.music.compose.pref.PlayerCoverType
 import com.youyuan.music.compose.pref.SettingsDataStore
 import com.youyuan.music.compose.ui.screens.ScreenRoute
 import com.youyuan.music.compose.ui.uicomponent.ResizableIconButton
-import com.youyuan.music.compose.ui.uicomponent.flowing.FlowingLightCanvasBackground
 import com.youyuan.music.compose.ui.uicomponent.sheet.AudioQualitySheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.MusicFXSheetDialog
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionArtist
@@ -77,28 +85,19 @@ import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionInfo
 import com.youyuan.music.compose.ui.uicomponent.sheet.SongActionSheetDialog
 import com.youyuan.music.compose.ui.utils.AdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
-import com.youyuan.music.compose.ui.utils.PlayerForegroundColorLight
 import com.youyuan.music.compose.ui.utils.getPlayerUIColor
-import com.youyuan.music.compose.ui.utils.getRememberedPlayerUIColor
 import com.youyuan.music.compose.ui.utils.rememberAdaptiveLayoutMode
 import com.youyuan.music.compose.ui.utils.rememberPlayerUIColor
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import com.youyuan.music.compose.utils.Logger
 import com.youyuan.music.compose.utils.SystemMediaDialogUtils
 import com.youyuan.music.compose.utils.formatTimeString
-import compose.icons.FeatherIcons
 import compose.icons.TablerIcons
-import compose.icons.feathericons.SkipBack
-import compose.icons.feathericons.SkipForward
 import compose.icons.tablericons.Cast
-import compose.icons.tablericons.PlayerPause
-import compose.icons.tablericons.PlayerPlay
-import compose.icons.tablericons.Playlist
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.saket.squiggles.SquigglySlider
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
@@ -118,29 +117,28 @@ fun BottomSheetPlayer(
     val coroutineScope = rememberCoroutineScope()
 
     // 当前Song对象
-    val currentSong = playerViewModel.currentSong.collectAsState().value
+    val currentSong = playerViewModel.currentSongItem.collectAsState().value
     val currentSongId = currentSong?.id
     val isFavorite by playerViewModel.isCurrentSongLiked.collectAsState(initial = false)
     // 封面
     val currentArtworkUrl = playerViewModel.currentAlbumArtUrl.collectAsState().value
 
     // 标题
-    fun List<String?>?.toDisplayText(): String? =
+    fun List<String>?.toDisplayText(): String? =
         this
             .orEmpty()
             .asSequence()
-            .mapNotNull { it?.trim() }
+            .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
             .joinToString(" / ")
             .takeIf { it.isNotBlank() }
 
     val baseTitle = currentSong?.name ?: stringResource(R.string.unknown_song)
-    val aliasText = currentSong?.alia.toDisplayText()
-        ?: currentSong?.tns.toDisplayText()
+    val aliasText = currentSong?.alias.toDisplayText()
     val title = if (aliasText != null) "$baseTitle（$aliasText）" else baseTitle
     // 艺术家
-    val artistName = playerViewModel.currentArtistNames.collectAsState().value
+    val artistName = playerViewModel.currentArtistNames.collectAsState().value.orEmpty()
 
     // 进度
     val currentPosition = playerViewModel.currentPosition.collectAsStateWithLifecycle().value
@@ -148,10 +146,6 @@ fun BottomSheetPlayer(
 
     // 设置数据存储
     val settingsDataStore = remember { SettingsDataStore(context) }
-    // 播放器进度条波形动画设置项
-    val isPlayerSquigglyWaveEnabled by settingsDataStore.isPlayerSquigglyWaveEnabled.collectAsState(
-        initial = true
-    )
     val playerCoverType by settingsDataStore.playerCoverType.collectAsState(initial = PlayerCoverType.DEFAULT.ordinal)
 
     // 播放状态
@@ -211,12 +205,12 @@ fun BottomSheetPlayer(
                 playerViewModel = playerViewModel,
                 song = SongActionInfo(
                     songId = currentSongId,
-                    albumId = currentSong.al?.id,
-                    title = currentSong.name,
+                    albumId = currentSong?.album?.id?.takeIf { it > 0 },
+                    title = currentSong?.name,
                     artist = artistName,
-                    album = currentSong.al?.name,
+                    album = currentSong?.album?.name,
                     artworkUrl = currentArtworkUrl,
-                    artists = currentSong.ar.orEmpty()
+                    artists = currentSong?.artists.orEmpty()
                         .map { SongActionArtist(artistId = it.id, name = it.name) },
                 ),
                 navController = navController,
@@ -229,13 +223,8 @@ fun BottomSheetPlayer(
     }
 
     // 播放器UI部分前景染色
-    var playerUIColor by remember {
-        mutableStateOf(getRememberedPlayerUIColor(isSystemInDarkTheme))
-    }
-
-    // 封面是否加载完成
-    var coverLoaded by remember {
-        mutableStateOf(false)
+    val playerUIColor by remember {
+        mutableStateOf(getPlayerUIColor(true))
     }
 
     // 进度条位置
@@ -248,54 +237,28 @@ fun BottomSheetPlayer(
 
     LaunchedEffect(state.isExpanded, currentSongId) {
         if (currentSongId != null) {
-            playerViewModel.clearCommentCount()
-            playerViewModel.refreshCommentCount(currentSongId)
+            playerViewModel.clearComments()
+            playerViewModel.refreshComments(currentSongId)
         }
     }
 
     // 状态栏颜色控制和全局前景色控制
-    LaunchedEffect(state.isExpanded, currentSong, coverLoaded, isSystemInDarkTheme) {
-        // 更新播放器UI颜色逻辑
-        playerUIColor = when {
-            // 当没有播放内容或封面未加载完成时，根据系统主题决定颜色
-            currentSong == null -> getPlayerUIColor(isSystemInDarkTheme)
-            !coverLoaded -> getRememberedPlayerUIColor(isSystemInDarkTheme)
-            // 当有播放内容且封面加载完成时，使用浅色前景
-            else -> PlayerForegroundColorLight
-        }
-
-        if (currentSong != null) {
-            rememberPlayerUIColor(playerUIColor)
-        }
-
+    LaunchedEffect(state.isExpanded, currentSong, isSystemInDarkTheme) {
         Logger.debug(
             "BottomSheetPlayer",
             "状态栏颜色控制: isExpanded=${state.isExpanded}," +
                     " currentPlaying=${currentSong?.name ?: "null"}," +
-                    " coverLoaded=$coverLoaded," +
                     " isSystemInDarkTheme=$isSystemInDarkTheme"
         )
 
         val window: Window = context.window
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
         if (state.isExpanded) {
-            // 展开时的状态栏逻辑，与 playerUIColor 逻辑保持一致
-            when {
-                // 当没有播放内容或封面未加载完成时，根据系统主题决定状态栏颜色
-                currentSong == null || !coverLoaded -> {
-                    withContext(Dispatchers.Main) {
-                        insetsController.isAppearanceLightStatusBars = !isSystemInDarkTheme
-                    }
-                }
-                // 当有播放内容且封面加载完成时，使用浅色状态栏（因为背景是流光溢彩效果，较暗）
-                else -> {
-                    withContext(Dispatchers.Main) {
-                        insetsController.isAppearanceLightStatusBars = false
-                    }
-                }
+            withContext(Dispatchers.Main) {
+                insetsController.isAppearanceLightStatusBars = false
             }
-        } else {
-            // 折叠时始终根据系统主题决定状态栏颜色
+        }
+        else {
             withContext(Dispatchers.Main) {
                 insetsController.isAppearanceLightStatusBars = !isSystemInDarkTheme
             }
@@ -314,9 +277,6 @@ fun BottomSheetPlayer(
             }
         }
     }
-
-
-    val enableFlowingBackground = !state.isCollapsed && state.progress > 0.05f
 
     BottomSheet(
         state = state,
@@ -337,14 +297,27 @@ fun BottomSheetPlayer(
             )
         },
         backgroundContent = {
-            FlowingLightCanvasBackground(
-                isPlaying = isPlaying && enableFlowingBackground,
-                imageUrl = currentArtworkUrl,
-                modifier = Modifier.fillMaxSize(),
-                onImageLoadResult = { result ->
-                    coverLoaded = result
-                },
-            )
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // 背景艺术图高斯模糊
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(currentArtworkUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = currentSong?.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .blur(18.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.6f))
+                )
+            }
         }
     ) {
         CompositionLocalProvider(
@@ -387,12 +360,11 @@ fun BottomSheetPlayer(
                                     sliderPosition = sliderPosition,
                                     currentPosition = currentPosition,
                                     duration = duration,
-                                    isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
                                     repeatMode = repeatMode,
                                     shuffleModeEnabled = shuffleModeEnabled,
                                     onSliderPositionChange = { sliderPosition = it },
                                     onSeekTo = { playerViewModel.seekTo(it) },
-                                    onToggleFavorite = { playerViewModel.toggleCurrentSongFavorite() },
+                                    onToggleFavorite = { playerViewModel.toggleLike() },
                                     onToggleLoopMode = { playerViewModel.toggleLoopMode() },
                                     onSkipToPrevious = { playerViewModel.skipToPrevious() },
                                     onTogglePlayPause = { playerViewModel.togglePlayPause() },
@@ -447,7 +419,6 @@ private fun ExpandedPlayerMainPage(
     sliderPosition: Long?,
     currentPosition: Long,
     duration: Long,
-    isPlayerSquigglyWaveEnabled: Boolean,
     repeatMode: Int,
     shuffleModeEnabled: Boolean,
     onSliderPositionChange: (Long?) -> Unit,
@@ -563,7 +534,6 @@ private fun ExpandedPlayerMainPage(
                             sliderPosition = sliderPosition,
                             currentPosition = currentPosition,
                             duration = duration,
-                            isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
                             isPlaying = isPlaying,
                             isBuffering = isBuffering,
                             repeatMode = repeatMode,
@@ -619,7 +589,6 @@ private fun ExpandedPlayerMainPage(
                     sliderPosition = sliderPosition,
                     currentPosition = currentPosition,
                     duration = duration,
-                    isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
                     isPlaying = isPlaying,
                     isBuffering = isBuffering,
                     repeatMode = repeatMode,
@@ -661,7 +630,6 @@ private fun PlayerControlsSection(
     sliderPosition: Long?,
     currentPosition: Long,
     duration: Long,
-    isPlayerSquigglyWaveEnabled: Boolean,
     isPlaying: Boolean,
     isBuffering: Boolean,
     repeatMode: Int,
@@ -795,10 +763,8 @@ private fun PlayerControlsSection(
             sliderPosition = sliderPosition,
             currentPosition = currentPosition,
             duration = duration,
-            isPlayerSquigglyWaveEnabled = isPlayerSquigglyWaveEnabled,
             onSliderPositionChange = { onSliderPositionChange(it) },
-            onSeekTo = { onSeekTo(it) },
-            isPlaying = isPlaying
+            onSeekTo = { onSeekTo(it) }
         )
 
         Row(
@@ -809,9 +775,9 @@ private fun PlayerControlsSection(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             val loopIconRes = when {
-                shuffleModeEnabled -> R.drawable.ic_shuffle_one
-                repeatMode == Player.REPEAT_MODE_ONE -> R.drawable.ic_play_once
-                else -> R.drawable.ic_play_cycle
+                shuffleModeEnabled -> R.drawable.ic_shuffle_outline
+                repeatMode == Player.REPEAT_MODE_ONE -> R.drawable.ic_repeat_one_outline
+                else -> R.drawable.ic_repeat_outline
             }
 
             ResizableIconButton(
@@ -824,7 +790,7 @@ private fun PlayerControlsSection(
             )
 
             ResizableIconButton(
-                icon = FeatherIcons.SkipBack,
+                icon = R.drawable.ic_skip_prev_filled,
                 color = LocalPlayerUIColor.current,
                 modifier = Modifier
                     .size(34.dp)
@@ -835,23 +801,23 @@ private fun PlayerControlsSection(
             if (isBuffering) {
                 CircularProgressIndicator(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(40.dp)
                         .padding(4.dp),
                     color = SaltTheme.colors.highlight
                 )
             } else {
                 ResizableIconButton(
-                    icon = if (isPlaying) TablerIcons.PlayerPause else TablerIcons.PlayerPlay,
+                    icon = if (isPlaying) R.drawable.ic_pause_filled else R.drawable.ic_play_filled,
                     color = LocalPlayerUIColor.current,
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(40.dp)
                         .padding(4.dp),
                     onClick = onTogglePlayPause,
                 )
             }
 
             ResizableIconButton(
-                icon = FeatherIcons.SkipForward,
+                icon = R.drawable.ic_skip_next_filled,
                 color = LocalPlayerUIColor.current,
                 modifier = Modifier
                     .size(34.dp)
@@ -860,7 +826,7 @@ private fun PlayerControlsSection(
             )
 
             ResizableIconButton(
-                icon = TablerIcons.Playlist,
+                icon = R.drawable.ic_playlist,
                 color = LocalPlayerUIColor.current,
                 modifier = Modifier
                     .size(34.dp)
@@ -923,14 +889,18 @@ private fun PlayerDataControlPanel(
     sliderPosition: Long?,
     currentPosition: Long,
     duration: Long,
-    isPlayerSquigglyWaveEnabled: Boolean,
     onSliderPositionChange: (Long?) -> Unit,
     onSeekTo: (Long) -> Unit,
-    isPlaying: Boolean,
 ) {
-    SquigglySlider(
+    val sliderColors = SliderDefaults.colors(
+        thumbColor = SaltTheme.colors.highlight,
+        activeTrackColor = SaltTheme.colors.highlight,
+        inactiveTrackColor = SaltTheme.colors.stroke,
+    )
+
+    Slider(
         value = (sliderPosition ?: currentPosition).toFloat(),
-        valueRange = 0f..(if (duration > 0) duration.toFloat() else 1f),
+        valueRange =  0f..(if (duration > 0) duration.toFloat() else 1f),
         onValueChange = { value ->
             onSliderPositionChange(value.toLong())
         },
@@ -938,22 +908,22 @@ private fun PlayerDataControlPanel(
             sliderPosition?.let { onSeekTo(it) }
             onSliderPositionChange(null)
         },
-        modifier = Modifier.fillMaxWidth(),
-        squigglesSpec =
-            SquigglySlider.SquigglesSpec(
-                amplitude = if (isPlayerSquigglyWaveEnabled) {
-                    if (isPlaying) (2.dp).coerceAtLeast(2.dp) else 0.dp
-                } else {
-                    0.dp
-                },
-                strokeWidth = 3.dp,
-                wavelength = (24.dp).coerceAtLeast(16.dp),
-            ),
-        colors = SliderDefaults.colors(
-            thumbColor = SaltTheme.colors.highlight,
-            activeTrackColor = SaltTheme.colors.highlight,
-            inactiveTrackColor = SaltTheme.colors.stroke,
-        )
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+        colors = sliderColors,
+        thumb = {
+            // disable thumb
+        },
+        track = { sliderState ->
+            SliderDefaults.Track(
+                sliderState = sliderState,
+                modifier = Modifier.height(6.dp),
+                thumbTrackGapSize = 1.dp,
+                trackInsideCornerSize = 8.dp,
+                trackCornerSize = 8.dp,
+                drawStopIndicator = null,
+                colors = sliderColors
+            )
+        }
     )
 
     Row(

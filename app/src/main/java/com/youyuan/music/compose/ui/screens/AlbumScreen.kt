@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,7 +46,7 @@ import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.AlbumDetail
-import com.youyuan.music.compose.api.model.SongDetail
+import com.youyuan.music.compose.data.model.SongItem as SongItemModel
 import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
 import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
@@ -62,6 +64,7 @@ import java.util.Locale
 @UnstableApi
 @UnstableSaltUiApi
 @ExperimentalFoundationApi
+@ExperimentalMaterial3ExpressiveApi
 @ExperimentalMaterial3Api
 @Composable
 fun AlbumScreen(
@@ -72,7 +75,7 @@ fun AlbumScreen(
     viewModel: AlbumDetailViewModel = hiltViewModel(),
 ) {
     var showSongActionDialog by remember { mutableStateOf(false) }
-    var selectedSongForAction by remember { mutableStateOf<SongDetail?>(null) }
+    var selectedSongForAction by remember { mutableStateOf<SongItemModel?>(null) }
 
     if (showSongActionDialog) {
         val s = selectedSongForAction
@@ -81,13 +84,12 @@ fun AlbumScreen(
                 playerViewModel = playerViewModel,
                 song = SongActionInfo(
                     songId = s.id,
-                    albumId = s.al?.id,
+                    albumId = s.album.id.takeIf { it > 0 },
                     title = s.name,
-                    artist = s.ar?.joinToString(", ") { it.name.orEmpty() }?.ifBlank { null },
-                    album = s.al?.name,
-                    artworkUrl = s.al?.picUrl,
-                    artists = s.ar.orEmpty()
-                        .map { SongActionArtist(artistId = it.id, name = it.name) },
+                    artist = s.artists.joinToString(", ") { it.name }.ifBlank { null },
+                    album = s.album.name.ifBlank { null },
+                    artworkUrl = s.album.picUrl,
+                    artists = s.artists.map { SongActionArtist(artistId = it.id, name = it.name) },
                 ),
                 navController = navController,
                 onDismissRequest = {
@@ -126,12 +128,18 @@ fun AlbumScreen(
         ) {
             when {
                 loading && album == null -> {
-                    Text(
-                        text = "加载中...",
-                        style = SaltTheme.textStyles.sub,
-                        color = SaltTheme.colors.subText,
+                    Column(
                         modifier = Modifier.align(Alignment.Center)
-                    )
+                    ) {
+                        LoadingIndicator(
+                            color = SaltTheme.colors.highlight
+                        )
+                        Text(
+                            text = "加载中...",
+                            style = SaltTheme.textStyles.sub,
+                            color = SaltTheme.colors.subText,
+                        )
+                    }
                 }
 
                 !error.isNullOrBlank() && album == null -> {
@@ -218,9 +226,9 @@ fun AlbumScreen(
                                             showSongActionDialog = true
                                         },
                                         onClick = { songId ->
-                                            playerViewModel.playTargetSongWithPlaylistSmart(
-                                                targetSongId = songId,
-                                                allSongIds = songs.map { it.id },
+                                            playerViewModel.play(
+                                                songId = songId,
+                                                songList = songs
                                             )
                                         }
                                     )

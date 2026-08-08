@@ -11,6 +11,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
@@ -30,6 +31,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @ExperimentalFoundationApi
 @ExperimentalMaterialApi
 @ExperimentalMaterial3Api
+@ExperimentalMaterial3ExpressiveApi
 @UnstableSaltUiApi
 class MainActivity : ComponentActivity() {
 

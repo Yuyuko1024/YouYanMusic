@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
@@ -60,7 +62,7 @@ import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.ArtistProfile
-import com.youyuan.music.compose.api.model.SongDetail
+import com.youyuan.music.compose.data.model.SongItem as SongItemModel
 import com.youyuan.music.compose.ui.uicomponent.AlbumItem
 import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
@@ -77,6 +79,7 @@ import kotlinx.coroutines.launch
 @UnstableApi
 @UnstableSaltUiApi
 @ExperimentalFoundationApi
+@ExperimentalMaterial3ExpressiveApi
 @ExperimentalMaterial3Api
 @Composable
 fun ArtistScreen(
@@ -87,7 +90,7 @@ fun ArtistScreen(
     viewModel: ArtistViewModel = hiltViewModel(),
 ) {
     var showSongActionDialog by remember { mutableStateOf(false) }
-    var selectedSongForAction by remember { mutableStateOf<SongDetail?>(null) }
+    var selectedSongForAction by remember { mutableStateOf<SongItemModel?>(null) }
 
     val artist by viewModel.artist.collectAsState()
     val topSongs by viewModel.topSongs.collectAsState()
@@ -117,13 +120,12 @@ fun ArtistScreen(
                 playerViewModel = playerViewModel,
                 song = SongActionInfo(
                     songId = s.id,
-                    albumId = s.al?.id,
+                    albumId = s.album.id.takeIf { it > 0 },
                     title = s.name,
-                    artist = s.ar?.joinToString(", ") { it.name.orEmpty() }?.ifBlank { null },
-                    album = s.al?.name,
-                    artworkUrl = s.al?.picUrl,
-                    artists = s.ar.orEmpty()
-                        .map { SongActionArtist(artistId = it.id, name = it.name) },
+                    artist = s.artists.joinToString(", ") { it.name }.ifBlank { null },
+                    album = s.album.name.ifBlank { null },
+                    artworkUrl = s.album.picUrl,
+                    artists = s.artists.map { SongActionArtist(artistId = it.id, name = it.name) },
                 ),
                 navController = navController,
                 onDismissRequest = {
@@ -170,12 +172,19 @@ fun ArtistScreen(
 
             when {
                 loading && artist == null -> {
-                    Text(
-                        text = "加载中...",
-                        style = SaltTheme.textStyles.sub,
-                        color = SaltTheme.colors.subText,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        LoadingIndicator(
+                            color = SaltTheme.colors.highlight
+                        )
+                        Text(
+                            text = "加载中...",
+                            style = SaltTheme.textStyles.sub,
+                            color = SaltTheme.colors.subText,
+                        )
+                    }
                 }
 
                 !error.isNullOrBlank() && artist == null -> {
@@ -341,9 +350,9 @@ fun ArtistScreen(
                                                             showSongActionDialog = true
                                                         },
                                                         onClick = { songId ->
-                                                            playerViewModel.playTargetSongWithPlaylistSmart(
-                                                                targetSongId = songId,
-                                                                allSongIds = topSongs.map { it.id },
+                                                            playerViewModel.play(
+                                                                songId = songId,
+                                                                songList = topSongs,
                                                             )
                                                         }
                                                     )

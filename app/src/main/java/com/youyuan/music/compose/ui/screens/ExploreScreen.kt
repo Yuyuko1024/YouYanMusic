@@ -28,6 +28,8 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,12 +52,11 @@ import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.BannerItem
-import com.youyuan.music.compose.api.model.PersonalFmSong
 import com.youyuan.music.compose.api.model.PersonalizedNewSongItem
 import com.youyuan.music.compose.api.model.PersonalizedPlaylistItem
 import com.youyuan.music.compose.api.model.RecommendResourceItem
-import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.api.model.ToplistItem
+import com.youyuan.music.compose.data.model.SongItem as SongItemModel
 import com.youyuan.music.compose.ui.uicomponent.overScrollHorizontal
 import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.view.MainTabScaffold
@@ -215,11 +216,10 @@ fun ExploreScreen(
                             loading = personalFmSongsLoading,
                             error = personalFmSongsError,
                             onSongClick = { songId ->
-                                val ids = personalFmSongs.map { it.id }
-                                if (ids.isNotEmpty()) {
-                                    playerViewModel.playTargetSongWithPlaylist(
-                                        targetSongId = songId,
-                                        allSongIds = ids,
+                                if (personalFmSongs.isNotEmpty()) {
+                                    playerViewModel.play(
+                                        songId = songId,
+                                        songList = personalFmSongs,
                                     )
                                 }
                             }
@@ -236,11 +236,10 @@ fun ExploreScreen(
                             loading = dailyRecommendSongsLoading,
                             error = dailyRecommendSongsError,
                             onSongClick = { songId ->
-                                val ids = dailyRecommendSongs.map { it.id }
-                                if (ids.isNotEmpty()) {
-                                    playerViewModel.playTargetSongWithPlaylist(
-                                        targetSongId = songId,
-                                        allSongIds = ids,
+                                if (dailyRecommendSongs.isNotEmpty()) {
+                                    playerViewModel.play(
+                                        songId = songId,
+                                        songList = dailyRecommendSongs,
                                     )
                                 }
                             }
@@ -258,12 +257,35 @@ fun ExploreScreen(
                         loading = newSongsLoading,
                         error = newSongsError,
                         onSongClick = { songId ->
-                            val ids = newSongs.mapNotNull { it.resolvedSongId() }
-                            if (songId != null && ids.isNotEmpty()) {
-                                playerViewModel.playTargetSongWithPlaylist(
-                                    targetSongId = songId,
-                                    allSongIds = ids,
-                                )
+                            if (songId != null && newSongs.isNotEmpty()) {
+                                // 从 PersonalizedNewSongItem 构建 SongItem 列表
+                                val songItems = newSongs.mapNotNull { item ->
+                                    val s = item.song ?: return@mapNotNull null
+                                    val sid = s.id ?: return@mapNotNull null
+                                    com.youyuan.music.compose.data.model.SongItem(
+                                        id = sid,
+                                        name = s.name ?: item.name ?: "未知歌曲",
+                                        artists = s.artists.orEmpty().map { a ->
+                                            com.youyuan.music.compose.data.model.ArtistInfo(
+                                                id = a.id ?: 0,
+                                                name = a.name ?: "未知艺术家",
+                                            )
+                                        },
+                                        album = com.youyuan.music.compose.data.model.AlbumInfo(
+                                            id = s.album?.id ?: 0,
+                                            name = s.album?.name ?: "未知专辑",
+                                        ),
+                                        duration = 0,
+                                        fee = com.youyuan.music.compose.data.model.SongFee.FREE,
+                                        isAvailable = true,
+                                    )
+                                }
+                                if (songItems.isNotEmpty()) {
+                                    playerViewModel.play(
+                                        songId = songId,
+                                        songList = songItems,
+                                    )
+                                }
                             }
                         }
                     )
@@ -352,12 +374,7 @@ private fun DailyRecommendPlaylistSection(
     modifier: Modifier = Modifier,
 ) {
     when {
-        loading -> Text(
-            text = "加载中...",
-            style = SaltTheme.textStyles.sub,
-            color = SaltTheme.colors.subText,
-            modifier = modifier
-        )
+        loading -> LoadingMessage(modifier = modifier)
 
         !error.isNullOrBlank() -> Text(
             text = error,
@@ -395,19 +412,14 @@ private fun DailyRecommendPlaylistSection(
 
 @Composable
 private fun DailyRecommendSongsSection(
-    songs: List<SongDetail>,
+    songs: List<SongItemModel>,
     loading: Boolean,
     error: String?,
     onSongClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when {
-        loading -> Text(
-            text = "加载中...",
-            style = SaltTheme.textStyles.sub,
-            color = SaltTheme.colors.subText,
-            modifier = modifier
-        )
+        loading -> LoadingMessage(modifier = modifier)
 
         !error.isNullOrBlank() -> Text(
             text = error,
@@ -425,18 +437,18 @@ private fun DailyRecommendSongsSection(
 
         else -> {
             Column(modifier = modifier.fillMaxWidth()) {
-                songs.take(10).forEach { detail ->
+                songs.take(10).forEach { item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .clickable { onSongClick(detail.id) }
+                            .clickable { onSongClick(item.id) }
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
-                            model = detail.al?.picUrl,
-                            contentDescription = detail.name ?: "song",
+                            model = item.album.picUrl,
+                            contentDescription = item.name,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(44.dp)
@@ -445,14 +457,14 @@ private fun DailyRecommendSongsSection(
                         Spacer(Modifier.size(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                text = detail.name.orEmpty(),
+                                text = item.name,
                                 style = SaltTheme.textStyles.main,
                                 color = SaltTheme.colors.text,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            val artist = detail.ar?.joinToString(", ") { it.name.orEmpty() }
-                                ?.takeIf { it.isNotBlank() }
+                            val artist = item.artists.joinToString(", ") { it.name }
+                                .takeIf { it.isNotBlank() }
                             if (!artist.isNullOrBlank()) {
                                 Text(
                                     text = artist,
@@ -472,19 +484,14 @@ private fun DailyRecommendSongsSection(
 
 @Composable
 private fun PersonalFmSection(
-    songs: List<PersonalFmSong>,
+    songs: List<SongItemModel>,
     loading: Boolean,
     error: String?,
     onSongClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when {
-        loading -> Text(
-            text = "加载中...",
-            style = SaltTheme.textStyles.sub,
-            color = SaltTheme.colors.subText,
-            modifier = modifier
-        )
+        loading -> LoadingMessage(modifier = modifier)
 
         !error.isNullOrBlank() -> Text(
             text = error,
@@ -502,18 +509,18 @@ private fun PersonalFmSection(
 
         else -> {
             Column(modifier = modifier.fillMaxWidth()) {
-                songs.take(10).forEach { fm ->
+                songs.take(10).forEach { item ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .clickable { onSongClick(fm.id) }
+                            .clickable { onSongClick(item.id) }
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
-                            model = fm.album?.picUrl,
-                            contentDescription = fm.name ?: "fm",
+                            model = item.album.picUrl,
+                            contentDescription = item.name,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(44.dp)
@@ -522,14 +529,14 @@ private fun PersonalFmSection(
                         Spacer(Modifier.size(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                text = fm.name.orEmpty(),
+                                text = item.name,
                                 style = SaltTheme.textStyles.main,
                                 color = SaltTheme.colors.text,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            val artist = fm.artists?.joinToString(", ") { it.name.orEmpty() }
-                                ?.takeIf { it.isNotBlank() }
+                            val artist = item.artists.joinToString(", ") { it.name }
+                                .takeIf { it.isNotBlank() }
                             if (!artist.isNullOrBlank()) {
                                 Text(
                                     text = artist,
@@ -594,6 +601,28 @@ private fun SectionTitleWithAction(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun LoadingMessage(
+    modifier: Modifier = Modifier,
+    text: String = "加载中...",
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LoadingIndicator(
+            color = SaltTheme.colors.highlight
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(
+            text = text,
+            style = SaltTheme.textStyles.sub,
+            color = SaltTheme.colors.subText,
+        )
+    }
+}
+
 @Composable
 private fun PersonalizedPlaylistSection(
     playlists: List<PersonalizedPlaylistItem>,
@@ -604,12 +633,7 @@ private fun PersonalizedPlaylistSection(
 ) {
     when {
         loading -> {
-            Text(
-                text = "加载中...",
-                style = SaltTheme.textStyles.sub,
-                color = SaltTheme.colors.subText,
-                modifier = modifier
-            )
+            LoadingMessage(modifier = modifier)
         }
 
         !error.isNullOrBlank() -> {
@@ -709,12 +733,7 @@ private fun NewSongSection(
 ) {
     when {
         loading -> {
-            Text(
-                text = "加载中...",
-                style = SaltTheme.textStyles.sub,
-                color = SaltTheme.colors.subText,
-                modifier = modifier
-            )
+            LoadingMessage(modifier = modifier)
         }
 
         !error.isNullOrBlank() -> {
@@ -794,12 +813,7 @@ private fun ToplistSection(
 ) {
     when {
         loading -> {
-            Text(
-                text = "加载中...",
-                style = SaltTheme.textStyles.sub,
-                color = SaltTheme.colors.subText,
-                modifier = modifier
-            )
+            LoadingMessage(modifier = modifier)
         }
 
         !error.isNullOrBlank() -> {
@@ -921,7 +935,7 @@ private fun BannerSection(
                         .background(SaltTheme.colors.background),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "Banner 加载中…", color = SaltTheme.colors.subText)
+                    LoadingMessage(text = "Banner 加载中…")
                 }
             }
 

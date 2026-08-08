@@ -13,10 +13,6 @@ fun getPlayerUIColor(isDark: Boolean): Color {
     return if (isDark) PlayerForegroundColorLight else PlayerForegroundColorDark
 }
 
-fun getRememberedPlayerUIColor(isDark: Boolean): Color {
-    return rememberedPlayerUIColorState.value ?: getPlayerUIColor(isDark)
-}
-
 fun rememberPlayerUIColor(color: Color) {
     rememberedPlayerUIColorState.value = color
 }

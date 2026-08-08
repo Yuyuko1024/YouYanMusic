@@ -20,24 +20,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
+import androidx.media3.common.MediaItem
 import com.youyuan.music.compose.R
-import com.youyuan.music.compose.api.model.SongDetail
 import com.youyuan.music.compose.ui.theme.Theme
 
 @Composable
 fun PlaylistItem(
     modifier: Modifier = Modifier,
-    song: SongDetail,
+    mediaItem: MediaItem,
     currentPlayingIndex: Int,
     itemIndex: Int,
     textColor: Color,
     onClick: () -> Unit = {},
     onRemoveClick: () -> Unit = {}
 ) {
-    val title = song.name ?: stringResource(R.string.unknown_song)
-    val artist =
-        song.ar?.joinToString(", ") { it.name ?: "" } ?: stringResource(R.string.unknown_artist)
-    val album = song.al?.name ?: stringResource(R.string.unknown_album)
+    val metadata = mediaItem.mediaMetadata
+    val title = metadata.title?.toString() ?: stringResource(R.string.unknown_song)
+    val artist = metadata.artist?.toString() ?: stringResource(R.string.unknown_artist)
+    val album = metadata.albumTitle?.toString() ?: stringResource(R.string.unknown_album)
 
     val isCurrentPlaying = currentPlayingIndex == itemIndex
 

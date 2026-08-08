@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -51,7 +52,7 @@ import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.moriafly.salt.ui.dialog.YesNoDialog
 import com.youyuan.music.compose.R
-import com.youyuan.music.compose.api.model.SongDetail
+import com.youyuan.music.compose.data.model.SongItem as SongItemModel
 import com.youyuan.music.compose.constants.PlayerCoverVerticalPadding
 import com.youyuan.music.compose.constants.PlayerHorizontalPadding
 import com.youyuan.music.compose.ui.uicomponent.listitem.PlaylistItem
@@ -75,7 +76,7 @@ fun PlaylistPager(
     // 当前播放列表
     val playlist = playerViewModel.playlist.collectAsState().value
     // 当前播放的媒体
-    val currentSong = playerViewModel.currentSong.collectAsState().value
+    val currentSong = playerViewModel.currentSongItem.collectAsState().value
     // 获取当前播放的索引
     val currentPlayingIndex = playerViewModel.currentSongIndex.collectAsState().value
     // 当前播放的专辑封面
@@ -97,7 +98,7 @@ fun PlaylistPager(
             title = stringResource(R.string.clear_playlist),
             content = stringResource(R.string.clear_playlist_confirm),
             onConfirm = {
-                playerViewModel.clearPlaylist()
+                playerViewModel.clearQueue()
                 showClearPlaylist = false
             },
             onDismissRequest = {
@@ -239,17 +240,18 @@ fun PlaylistPager(
                     itemsIndexed(
                         items = playlist,
                         key = { index, _ -> index }
-                    ) { index, playlistItem ->
+                    ) { index, mediaItem ->
                         PlaylistItem(
-                            song = playlistItem.song,
+                            mediaItem = mediaItem,
                             currentPlayingIndex = currentPlayingIndex,
                             itemIndex = index,
                             onClick = {
-                                playerViewModel.getPlayer()?.seekToDefaultPosition(index)
-                                playerViewModel.getPlayer()?.play()
+                                playerViewModel.playAtIndex(index)
                             },
                             onRemoveClick = {
-                                playerViewModel.removeSongInPlaylistById(playlistItem.song.id)
+                                mediaItem.mediaId.toLongOrNull()?.let {
+                                    playerViewModel.removeFromQueue(it)
+                                }
                             },
                             textColor = uiColor
                         )
@@ -269,7 +271,7 @@ fun PlaylistPager(
 
 @Composable
 private fun PlaylistNowPlayingHeader(
-    song: SongDetail,
+    song: SongItemModel,
     albumArtUrl: String?,
     color: Color,
     onClick: () -> Unit = { }
@@ -305,15 +307,15 @@ private fun PlaylistNowPlayingHeader(
                 .align(Alignment.CenterVertically)
         ) {
             Text(
-                text = song.name ?: "",
+                text = song.name,
                 style = SaltTheme.textStyles.main,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = color
             )
 
-            val artist = song.ar?.joinToString(", ") { it.name ?: "" } ?: ""
-            val album = song.al?.name ?: ""
+            val artist = song.artists.joinToString(", ") { it.name }
+            val album = song.album.name
 
             val subTitle = "$artist - $album"
             Text(

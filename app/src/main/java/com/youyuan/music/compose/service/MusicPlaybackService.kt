@@ -33,11 +33,13 @@ import com.youyuan.music.compose.pref.AudioQualityLevel
 import com.youyuan.music.compose.pref.PlayerSeekToPreviousAction
 import com.youyuan.music.compose.pref.SettingsDataStore
 import com.youyuan.music.compose.utils.MediaCache
+import com.youyuan.music.compose.utils.SessionQualityOverride
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -88,10 +90,14 @@ class MusicPlaybackService : MediaLibraryService() {
         super.onCreate()
         settingsDataStore = SettingsDataStore(this)
 
-        // 监听音质切换：更新解析档位并清空缓存
+        // 监听音质切换：临时覆盖优先，否则用 DataStore 默认值
         serviceScope.launch {
-            settingsDataStore.playerAudioQualityLevel
-                .distinctUntilChanged()
+            combine(
+                settingsDataStore.playerAudioQualityLevel.distinctUntilChanged(),
+                SessionQualityOverride.level,
+            ) { defaultLevel, sessionOverride ->
+                sessionOverride ?: defaultLevel
+            }.distinctUntilChanged()
                 .collect { level ->
                     currentQualityLevel = level
                     playUrlCache.clear()

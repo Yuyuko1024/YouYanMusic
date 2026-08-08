@@ -39,7 +39,7 @@ import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
-import com.youyuan.music.compose.api.model.SongDetail
+import com.youyuan.music.compose.data.model.SongItem as SongItemModel
 
 @UnstableApi
 @UnstableSaltUiApi
@@ -47,18 +47,19 @@ import com.youyuan.music.compose.api.model.SongDetail
 @ExperimentalFoundationApi
 @Composable
 fun SongItem(
-    song: SongDetail,
-    onMoreClick: ((SongDetail) -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    song: SongItemModel,
+    onMoreClick: ((SongItemModel) -> Unit)? = null,
     onClick: (Long) -> Unit = {}
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { onClick(song.id) }
     ) {
         Spacer(modifier = Modifier.padding(horizontal = 4.dp))
 
-        val artworkUri = song.al?.picUrl ?: R.drawable.ic_nav_music.toDrawable()
+        val artworkUri = song.album.picUrl ?: R.drawable.ic_nav_music.toDrawable()
 
         Row(
             modifier = Modifier
@@ -76,7 +77,7 @@ fun SongItem(
                     .size(50.dp)
                     .clip(RoundedCornerShape(4.dp))
                     .align(Alignment.CenterVertically),
-                contentDescription = "${song.al?.name}",
+                contentDescription = "${song.album.name}",
                 contentScale = ContentScale.Crop
             )
 
@@ -96,8 +97,7 @@ fun SongItem(
                         .joinToString(" / ")
                         .takeIf { it.isNotBlank() }
 
-                val aliasText = song.alia.toDisplayText()
-                    ?: song.tns.toDisplayText()
+                val aliasText = song.alias.toDisplayText()
 
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val containerMaxWidth = maxWidth
@@ -133,9 +133,9 @@ fun SongItem(
                     }
                 }
 
-                val artist = song.ar?.joinToString(", ") { it.name ?: "" }
-                    ?: stringResource(R.string.unknown_artist)
-                val album = song.al?.name ?: stringResource(R.string.unknown_album)
+                val artist = song.artists.joinToString(", ") { it.name }
+                    .ifBlank { stringResource(R.string.unknown_artist) }
+                val album = song.album.name.ifBlank { stringResource(R.string.unknown_album) }
 
                 Text(
                     text = "$artist - $album",

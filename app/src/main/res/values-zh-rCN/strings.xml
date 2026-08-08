@@ -124,6 +124,8 @@
     <string name="song_action_save_requires_login">请先登录后再保存歌曲</string>
     <string name="song_action_save_permission_denied">未授予存储权限，无法保存到本地</string>
 
+    <string name="settings_player_quality">默认播放音质</string>
+
     <string name="settings_download_quality">默认保存音质</string>
 
     <string name="download_task_notification_title">歌曲下载中</string>

@@ -26,16 +26,23 @@ fun AudioQualitySheetDialog(
     playerViewModel: PlayerViewModel,
     onDismissRequest: () -> Unit = {},
 ) {
-    val currentSongId = playerViewModel.currentSong.collectAsState().value?.id
+    val currentSong = playerViewModel.currentSongItem.collectAsState().value
+    val currentSongId = currentSong?.id
     val selectedLevelRaw = playerViewModel.selectedAudioQualityLevel.collectAsState().value
     val selectedLevel = AudioQualityLevel.fromLevel(selectedLevelRaw) ?: AudioQualityLevel.default()
 
-    val loading = playerViewModel.audioQualityLoading.collectAsState().value
-    val error = playerViewModel.audioQualityError.collectAsState().value
-    val availability = playerViewModel.availableAudioQualities.collectAsState().value
+    val availableResults = playerViewModel.availableQualities.collectAsState().value
+    val qualitiesLoading = playerViewModel.qualitiesLoading.collectAsState().value
 
+    val availableLevels = availableResults
+        .filter { it.available }
+        .map { it.requested }
+
+    // 每次打开弹窗/切歌时重新探测
     LaunchedEffect(currentSongId) {
-        playerViewModel.refreshAvailableAudioQualities(currentSongId)
+        if (currentSongId != null) {
+            playerViewModel.probeQualities(currentSongId)
+        }
     }
 
     BottomSheetDialog(
@@ -51,22 +58,15 @@ fun AudioQualitySheetDialog(
         )
 
         RoundedColumn {
-            if (loading) {
+            if (qualitiesLoading && availableLevels.isEmpty()) {
                 Item(
                     text = stringResource(R.string.audio_quality_loading),
                     onClick = {}
                 )
             } else {
-                if (!error.isNullOrBlank()) {
-                    Item(text = error, onClick = {})
-                }
-
-                val availableLevels = availability.filter { it.available }.map { it.requested }
-
                 val levelsToShow = if (availableLevels.isNotEmpty()) {
                     availableLevels
                 } else {
-                    // 探测失败/无结果时，仍允许用户选回标准，保证可播放
                     listOf(AudioQualityLevel.STANDARD)
                 }
 
@@ -82,7 +82,7 @@ fun AudioQualitySheetDialog(
                             level.displayName
                         },
                         onClick = {
-                            playerViewModel.applyAudioQualityToCurrentSong(level)
+                            playerViewModel.switchQuality(level)
                             dismiss()
                         }
                     )

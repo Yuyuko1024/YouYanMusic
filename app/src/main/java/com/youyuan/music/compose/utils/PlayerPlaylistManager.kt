@@ -1,23 +1,14 @@
 package com.youyuan.music.compose.utils
 
-import android.net.Uri
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
-import com.youyuan.music.compose.api.model.SongDetail
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object PlayerPlaylistManager {
 
-    data class PlaylistItem(
-        val song: SongDetail,
-        val playUrl: String?,
-        val albumArtUrl: String?
-    )
-
-    private val _playlist = MutableStateFlow<List<PlaylistItem>>(emptyList())
-    val playlist: StateFlow<List<PlaylistItem>> = _playlist.asStateFlow()
+    private val _playlist = MutableStateFlow<List<MediaItem>>(emptyList())
+    val playlist: StateFlow<List<MediaItem>> = _playlist.asStateFlow()
 
     private val _currentIndex = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
@@ -29,42 +20,43 @@ object PlayerPlaylistManager {
 
     fun containsSong(songId: Long?): Boolean {
         if (songId == null) return false
-        return _playlist.value.any { it.song.id == songId }
+        return _playlist.value.any { it.mediaId.toLongOrNull() == songId }
     }
 
     fun findSongIndex(songId: Long?): Int {
         if (songId == null) return -1
-        return _playlist.value.indexOfFirst { it.song.id == songId }
+        return _playlist.value.indexOfFirst { it.mediaId.toLongOrNull() == songId }
     }
 
-    fun addItem(song: SongDetail, playUrl: String?, albumArtUrl: String?) {
-        if (containsSong(song.id)) return
-        val newItem = PlaylistItem(song, playUrl, albumArtUrl)
-        _playlist.value += newItem
+    fun addItemAt(index: Int, item: MediaItem) {
+        val currentList = _playlist.value.toMutableList()
+        val safeIndex = index.coerceIn(0, currentList.size)
+        currentList.add(safeIndex, item)
+        _playlist.value = currentList
+
+        if (safeIndex <= _currentIndex.value) {
+            _currentIndex.value += 1
+        }
     }
 
-    fun addItems(items: List<PlaylistItem>) {
-        val newItems = items.filter { !containsSong(it.song.id) }
+    fun addItems(items: List<MediaItem>) {
+        val existingIds = _playlist.value.map { it.mediaId }.toSet()
+        val newItems = items.filter { it.mediaId !in existingIds }
         if (newItems.isNotEmpty()) {
             _playlist.value += newItems
         }
     }
 
-    // 新增：在指定位置插入多个 Item
-    fun addItemsAt(index: Int, items: List<PlaylistItem>) {
+    fun addItemsAt(index: Int, items: List<MediaItem>) {
         val currentList = _playlist.value.toMutableList()
-        // 过滤掉已经存在的，避免重复
-        val newItems = items.filter { newItem ->
-            currentList.none { it.song.id == newItem.song.id }
-        }
+        val existingIds = currentList.map { it.mediaId }.toSet()
+        val newItems = items.filter { it.mediaId !in existingIds }
 
         if (newItems.isNotEmpty()) {
-            // 确保索引不越界
             val safeIndex = index.coerceIn(0, currentList.size)
             currentList.addAll(safeIndex, newItems)
             _playlist.value = currentList
 
-            // 如果插入位置在当前播放位置之前，需要调整 currentIndex
             val addedCount = newItems.size
             if (safeIndex <= _currentIndex.value) {
                 _currentIndex.value += addedCount
@@ -87,17 +79,9 @@ object PlayerPlaylistManager {
         }
     }
 
-    fun setPlaylist(items: List<PlaylistItem>) {
+    fun setPlaylist(items: List<MediaItem>) {
         _playlist.value = items
         _currentIndex.value = 0
-    }
-
-    fun updatePlayUrlBySongId(songId: Long, playUrl: String) {
-        val currentList = _playlist.value.toMutableList()
-        val idx = currentList.indexOfFirst { it.song.id == songId }
-        if (idx == -1) return
-        currentList[idx] = currentList[idx].copy(playUrl = playUrl)
-        _playlist.value = currentList
     }
 
     fun setCurrentIndex(index: Int) {
@@ -106,57 +90,15 @@ object PlayerPlaylistManager {
         }
     }
 
-    fun getCurrentItem(): PlaylistItem? {
+    fun getCurrentItem(): MediaItem? {
         val index = _currentIndex.value
         val list = _playlist.value
         return if (index in list.indices) list[index] else null
     }
 
-    fun PlaylistItem.toMediaItem(): MediaItem {
-        val builder = MediaItem.Builder()
-            .setMediaId(song.id.toString())
-        val resolvedUri = if (!playUrl.isNullOrBlank()) {
-            Uri.parse(playUrl)
-        } else {
-            // 懒加载占位：由 Service 侧 DataSource 解析 songId -> 实际播放 URL
-            Uri.parse("yym://song/${song.id}")
-        }
-        resolvedUri?.let { builder.setUri(it) }
-        return builder
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(song.name ?: "Unknown")
-                    .setArtist(song.ar?.joinToString(", ") { it.name ?: "Unknown" } ?: "Unknown")
-                    .setAlbumTitle(song.al?.name)
-                    .setArtworkUri(albumArtUrl?.let { Uri.parse(it) })
-                    .build()
-            )
-            .build()
-    }
-
-    fun toMediaItems(): List<MediaItem> {
-        return _playlist.value.map { it.toMediaItem() }
-    }
-
-    fun buildMediaItem(song: SongDetail, playUrl: String?, albumArtUrl: String?): MediaItem {
-        val builder = MediaItem.Builder()
-            .setMediaId(song.id.toString())
-        val resolvedUri = if (!playUrl.isNullOrBlank()) {
-            Uri.parse(playUrl)
-        } else {
-            // 懒加载占位：由 Service 侧 DataSource 解析 songId -> 实际播放 URL
-            Uri.parse("yym://song/${song.id}")
-        }
-        resolvedUri?.let { builder.setUri(it) }
-        return builder
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(song.name ?: "Unknown")
-                    .setArtist(song.ar?.joinToString(", ") { it.name ?: "Unknown" } ?: "Unknown")
-                    .setAlbumTitle(song.al?.name)
-                    .setArtworkUri(albumArtUrl?.let { Uri.parse(it) })
-                    .build()
-            )
-            .build()
+    /** 获取指定索引位置的歌曲 ID */
+    fun getSongIdAt(index: Int): Long? {
+        val list = _playlist.value
+        return list.getOrNull(index)?.mediaId?.toLongOrNull()
     }
 }

@@ -1,6 +1,7 @@
 package com.youyuan.music.compose.ui.player
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -73,7 +75,19 @@ fun LyricsPager(
     playerViewModel: PlayerViewModel
 ) {
     val parsedLyrics = playerViewModel.parsedLyrics.collectAsState().value
-    val currentPlaying = playerViewModel.currentMediaItem.collectAsState().value
+    val currentPlaying = playerViewModel.currentSongItem.collectAsState().value?.let { song ->
+        MediaItem.Builder()
+            .setMediaId(song.id.toString())
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(song.name)
+                    .setArtist(song.artists.joinToString(", ") { it.name })
+                    .setAlbumTitle(song.album.name)
+                    .setArtworkUri(song.album.picUrl?.let { Uri.parse(it) })
+                    .build()
+            )
+            .build()
+    }
     val currentPositionState = playerViewModel.currentPosition.collectAsStateWithLifecycle()
     val isPlayingState = playerViewModel.isPlaying.collectAsState()
     val durationState = playerViewModel.duration.collectAsStateWithLifecycle()

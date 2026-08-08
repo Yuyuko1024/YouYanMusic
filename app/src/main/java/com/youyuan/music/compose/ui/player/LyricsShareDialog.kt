@@ -35,7 +35,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,7 +68,7 @@ import com.moriafly.salt.ui.ItemSwitcher
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.youyuan.music.compose.R
-import com.youyuan.music.compose.api.model.SongDetail
+import com.youyuan.music.compose.data.model.SongItem as SongItemModel
 import com.youyuan.music.compose.ui.uicomponent.flowing.FlowingLightCanvasBackground
 import com.youyuan.music.compose.ui.utils.LocalPlayerUIColor
 import com.youyuan.music.compose.ui.utils.composable.Capturable
@@ -122,7 +121,7 @@ fun LyricsShareDialog(
     initialLineStart: Int,
     isPlaying: Boolean,
     artworkUrl: String?,
-    currentSong: SongDetail?,
+    currentSong: SongItemModel?,
     dragModifier: Modifier,
     onDismissRequest: () -> Unit,
 ) {
@@ -314,7 +313,7 @@ private fun ColumnScope.ShareGenerateStep(
     onToggleSongDetail: (Boolean) -> Unit,
     isPlaying: Boolean,
     artworkUrl: String?,
-    currentSong: SongDetail?,
+    currentSong: SongItemModel?,
     onBack: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -465,7 +464,7 @@ private fun LyricsShareCardApple(
     showSongDetail: Boolean,
     isPlaying: Boolean,
     artworkUrl: String?,
-    currentSong: SongDetail?,
+    currentSong: SongItemModel?,
     modifier: Modifier = Modifier,
 ) {
     val uiColor = LocalPlayerUIColor.current
@@ -536,7 +535,7 @@ private fun LyricsShareCardApple(
 private fun LyricsShareCardSpotify(
     capturableController: CapturableController,
     selectedLines: List<ShareLyricLine>,
-    currentSong: SongDetail?,
+    currentSong: SongItemModel?,
     showTranslation: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -578,7 +577,7 @@ private fun LyricsShareCardSpotify(
                             .background(Color.White.copy(alpha = 0.10f))
                             .padding(horizontal = 16.dp, vertical = 10.dp)
                     ) {
-                        val artist = currentSong?.ar?.joinToString(", ") { it.name ?: "" } ?: ""
+                        val artist = currentSong?.artists?.joinToString(", ") { it.name } ?: ""
 
                         Text(
                             text = "${currentSong?.name}",
@@ -695,7 +694,7 @@ private fun shareImageUri(context: Context, uri: Uri) {
 
 @Composable
 private fun NowPlayingHeader(
-    song: SongDetail?,
+    song: SongItemModel?,
     albumArtUrl: String?,
     color: Color
 ) {
@@ -734,8 +733,8 @@ private fun NowPlayingHeader(
                 color = color
             )
 
-            val artist = song?.ar?.joinToString(", ") { it.name ?: "" } ?: ""
-            val album = song?.al?.name ?: ""
+            val artist = song?.artists?.joinToString(", ") { it.name } ?: ""
+            val album = song?.album?.name ?: ""
 
             val subTitle = "$artist - $album"
             Text(

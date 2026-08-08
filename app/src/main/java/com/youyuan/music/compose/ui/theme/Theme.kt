@@ -23,7 +23,10 @@ fun lightColors(): SaltColors = SaltColors(
     subBackground = Surface, // 次要背景色
     popup = White, // 弹窗背景色
     stroke = Outline, // 描边颜色
-    onHighlight = TextOnPrimary // 高亮色上的文字颜色
+    onHighlight = TextOnPrimary,
+    success = Success,
+    warning = Warning,
+    error = Error,
 )
 
 @Composable
@@ -35,7 +38,10 @@ fun darkColors(): SaltColors = SaltColors(
     subBackground = DarkSurface, // 暗色主题的次要背景色
     popup = DarkSurfaceVariant, // 暗色主题的弹窗背景色
     stroke = DarkOutline, // 暗色主题的描边颜色
-    onHighlight = DarkTextPrimary // 暗色主题的高亮色变体
+    onHighlight = DarkTextPrimary,
+    success = Success,
+    warning = Warning,
+    error = Error,
 )
 
 @Composable
@@ -47,7 +53,10 @@ fun newYearLightColors(): SaltColors = SaltColors(
     subBackground = NewYearSurface,
     popup = White,
     stroke = NewYearAccentGold,
-    onHighlight = NewYearOnPrimary
+    onHighlight = NewYearOnPrimary,
+    success = Success,
+    warning = NewYearAccentGold,
+    error = NewYearPrimaryRed,
 )
 
 @Composable
@@ -59,7 +68,10 @@ fun newYearDarkColors(): SaltColors = SaltColors(
     subBackground = NewYearDarkSurface,
     popup = NewYearDarkSurface,
     stroke = NewYearLightGold,
-    onHighlight = NewYearDeepRed
+    onHighlight = NewYearDeepRed,
+    success = Success,
+    warning = NewYearLightGold,
+    error = NewYearPrimaryRed,
 )
 
 @Composable
@@ -118,7 +130,10 @@ private fun ColorScheme.toSaltColors(): SaltColors = SaltColors(
     subBackground = this.surfaceContainerLow, // 使用更低对比度的surface
     popup = this.surfaceContainerHigh, // 弹窗使用更高对比度的surface
     stroke = this.outlineVariant, // 使用更柔和的outline变体
-    onHighlight = this.onPrimary // 使用onPrimary确保在高亮色上的文字有足够对比度
+    onHighlight = this.onPrimary,
+    success = Success,
+    warning = Warning,
+    error = this.error,
 )
 
 // 定义主题颜色

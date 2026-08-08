@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -42,6 +41,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -59,7 +59,6 @@ import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.constants.MiniPlayerHeight
 import com.youyuan.music.compose.ui.theme.UiDimens
-import com.youyuan.music.compose.ui.uicomponent.AcrylicFlipAsyncImage
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
 import compose.icons.TablerIcons
 import compose.icons.tablericons.PlayerPause
@@ -99,45 +98,42 @@ fun MiniPlayer(
 
 
     // 当前Song对象
-    val currentSong = playerViewModel.currentSong.collectAsState().value
+    val currentSong = playerViewModel.currentSongItem.collectAsState().value
     // 封面
     val currentArtworkUrl = playerViewModel.currentAlbumArtUrl.collectAsState().value
 
     // 标题
-    fun List<String?>?.toDisplayText(): String? =
+    fun List<String>?.toDisplayText(): String? =
         this
             .orEmpty()
             .asSequence()
-            .mapNotNull { it?.trim() }
+            .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
             .joinToString(" / ")
             .takeIf { it.isNotBlank() }
 
     val baseTitle = currentSong?.name ?: stringResource(R.string.unknown_song)
-    val aliasText = currentSong?.alia.toDisplayText()
-        ?: currentSong?.tns.toDisplayText()
+    val aliasText = currentSong?.alias.toDisplayText()
     val title = if (aliasText != null) "$baseTitle（$aliasText）" else baseTitle
     // 艺术家
-    val artistName = playerViewModel.currentArtistNames.collectAsState().value
+    val artistName = playerViewModel.currentArtistNames.collectAsState().value.orEmpty()
     val playlist = playerViewModel.playlist.collectAsState().value
-    val player = playerViewModel.getPlayer()
+    val currentSongIndex = playerViewModel.currentSongIndex.collectAsState().value
 
     val isInTriggerZone = isDragging && abs(dragOffsetX) >= triggerOffsetPx
-    val targetSongName = remember(playlist, dragOffsetX, player?.currentMediaItemIndex) {
+    val targetSongName = remember(playlist, dragOffsetX, currentSongIndex) {
         if (playlist.isEmpty()) return@remember null
 
-        val targetIndex = if (dragOffsetX < 0f) {
-            player?.nextMediaItemIndex
-        } else if (dragOffsetX > 0f) {
-            player?.previousMediaItemIndex
-        } else {
-            null
+        val targetIndex = when {
+            dragOffsetX < 0f -> (currentSongIndex + 1).coerceAtMost(playlist.lastIndex)
+            dragOffsetX > 0f -> (currentSongIndex - 1).coerceAtLeast(0)
+            else -> null
         }
 
         targetIndex
             ?.takeIf { it in playlist.indices }
-            ?.let { playlist[it].song.name }
+            ?.let { playlist[it].mediaMetadata.title?.toString() }
             ?.takeIf { it.isNotBlank() }
     }
 
@@ -224,7 +220,7 @@ fun MiniPlayer(
                 )
                 Text(
                     text = if (isInTriggerZone) {
-                        targetSongName?.let { "松手播放：$it" } ?: "松手播放"
+                        targetSongName?.let { "松手播放：$it" }.orEmpty().ifEmpty { "松手播放" }
                     } else {
                         artistName
                     },
@@ -324,7 +320,7 @@ private fun PlayerControls(
                 onClick = onPlaylistClick
             ) {
                 Icon(
-                    painter = rememberVectorPainter(TablerIcons.Playlist),
+                    painter = painterResource(R.drawable.ic_playlist),
                     contentDescription = "播放列表",
                     modifier = Modifier.size(24.dp)
                 )

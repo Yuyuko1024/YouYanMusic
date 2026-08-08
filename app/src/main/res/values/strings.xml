@@ -124,6 +124,8 @@
     <string name="song_action_save_requires_login">Please sign in before saving songs</string>
     <string name="song_action_save_permission_denied">Storage permission denied, cannot save song</string>
 
+    <string name="settings_player_quality">Default playback quality</string>
+
     <string name="settings_download_quality">Default save quality</string>
 
     <string name="download_task_notification_title">Downloading Song</string>

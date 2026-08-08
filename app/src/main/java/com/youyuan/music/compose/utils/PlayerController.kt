@@ -34,9 +34,6 @@ class PlayerController @Inject constructor(
     private var mediaControllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
 
-    // 协程作用域
-    val scope = CoroutineScope(Dispatchers.Main)
-
     // 连接状态
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()

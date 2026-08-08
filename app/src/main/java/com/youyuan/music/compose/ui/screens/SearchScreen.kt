@@ -41,6 +41,7 @@ import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.ui.uicomponent.SearchTopAppBar
+import com.youyuan.music.compose.ui.uicomponent.SongItem
 import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
 import com.youyuan.music.compose.ui.view.ScreenScaffold
 import com.youyuan.music.compose.ui.viewmodel.PlayerViewModel
@@ -135,12 +136,9 @@ fun SearchScreen(
                             key = { it.id.toString() }
                         ) { result ->
                             SearchResultItem(
-                                title = result.name ?: stringResource(R.string.unknown_song),
-                                subtitle = result.artists?.joinToString(", ") { it.name ?: "" }
-                                    ?: stringResource(R.string.unknown_artist),
-                                onClick = {
-                                    playerViewModel.playSong(result)
-                                }
+                                title = result.name,
+                                subtitle = result.artists.joinToString(", ") { it.name },
+                                onClick = { playerViewModel.addSong(result.id) }
                             )
                         }
                     }

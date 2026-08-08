@@ -14,8 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,15 +41,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
-import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
 import com.moriafly.salt.ui.SaltTheme
 import com.moriafly.salt.ui.Text
 import com.moriafly.salt.ui.UnstableSaltUiApi
 import com.youyuan.music.compose.R
 import com.youyuan.music.compose.api.model.PlaylistCreator
+import com.youyuan.music.compose.data.model.SongItem as SongItemModel
 import com.youyuan.music.compose.ui.uicomponent.SongItem
-import com.youyuan.music.compose.ui.uicomponent.SongItemPlaceholder
 import com.youyuan.music.compose.ui.uicomponent.TiltedPhotoWall
 import com.youyuan.music.compose.ui.uicomponent.YouYanTitleBar
 import com.youyuan.music.compose.ui.uicomponent.overScrollVertical
@@ -59,6 +62,7 @@ import com.youyuan.music.compose.ui.viewmodel.PlaylistDetailViewModel
 @UnstableApi
 @UnstableSaltUiApi
 @ExperimentalFoundationApi
+@ExperimentalMaterial3ExpressiveApi
 @ExperimentalMaterial3Api
 @Composable
 fun PlaylistDetailScreen(
@@ -69,11 +73,7 @@ fun PlaylistDetailScreen(
     viewModel: PlaylistDetailViewModel = hiltViewModel(),
 ) {
     var showSongActionDialog by remember { mutableStateOf(false) }
-    var selectedSongForAction by remember {
-        mutableStateOf<com.youyuan.music.compose.api.model.SongDetail?>(
-            null
-        )
-    }
+    var selectedSongForAction by remember { mutableStateOf<SongItemModel?>(null) }
 
     if (showSongActionDialog) {
         val s = selectedSongForAction
@@ -82,13 +82,12 @@ fun PlaylistDetailScreen(
                 playerViewModel = playerViewModel,
                 song = SongActionInfo(
                     songId = s.id,
-                    albumId = s.al?.id,
+                    albumId = s.album.id.takeIf { it > 0 },
                     title = s.name,
-                    artist = s.ar?.joinToString(", ") { it.name.orEmpty() }?.ifBlank { null },
-                    album = s.al?.name,
-                    artworkUrl = s.al?.picUrl,
-                    artists = s.ar.orEmpty()
-                        .map { SongActionArtist(artistId = it.id, name = it.name) },
+                    artist = s.artists.joinToString(", ") { it.name }.ifBlank { null },
+                    album = s.album.name.ifBlank { null },
+                    artworkUrl = s.album.picUrl,
+                    artists = s.artists.map { SongActionArtist(artistId = it.id, name = it.name) },
                 ),
                 navController = navController,
                 onDismissRequest = {
@@ -106,7 +105,10 @@ fun PlaylistDetailScreen(
     val error by viewModel.error.collectAsState()
 
     val allSongIds by viewModel.allSongIds.collectAsState()
-    val lazyPagingItems = viewModel.songPagingFlow.collectAsLazyPagingItems()
+    val songListUiState by viewModel.songListUiState.collectAsState()
+    val songs = songListUiState.songs
+
+    val listState = rememberLazyListState()
 
     LaunchedEffect(playlistId) {
         viewModel.loadPlaylistDetail(playlistId)
@@ -129,12 +131,19 @@ fun PlaylistDetailScreen(
         ) {
             when {
                 loading && playlist == null -> {
-                    Text(
-                        text = "加载中...",
-                        style = SaltTheme.textStyles.sub,
-                        color = SaltTheme.colors.subText,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        LoadingIndicator(
+                            color = SaltTheme.colors.highlight
+                        )
+                        Text(
+                            text = "加载中...",
+                            style = SaltTheme.textStyles.sub,
+                            color = SaltTheme.colors.subText,
+                        )
+                    }
                 }
 
                 !error.isNullOrBlank() && playlist == null -> {
@@ -159,6 +168,7 @@ fun PlaylistDetailScreen(
                     }
 
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxSize()
                             .overScrollVertical(),
@@ -167,7 +177,7 @@ fun PlaylistDetailScreen(
                         item {
                             val coverUrlList by remember {
                                 derivedStateOf {
-                                    lazyPagingItems.itemSnapshotList.items.map { it.al?.picUrl }
+                                    songs.map { it.album.picUrl }
                                 }
                             }
 
@@ -210,58 +220,63 @@ fun PlaylistDetailScreen(
                             )
                         }
 
-                        item {
-                            Text(
-                                text = "歌曲列表",
-                                style = SaltTheme.textStyles.main,
-                                color = SaltTheme.colors.text,
-                                modifier = Modifier.padding(vertical = 8.dp, horizontal = 12.dp)
-                            )
-                        }
-
-                        if (lazyPagingItems.itemCount == 0) {
-                            item {
-                                Text(
-                                    text = "暂无歌曲",
-                                    style = SaltTheme.textStyles.sub,
-                                    color = SaltTheme.colors.subText,
-                                    modifier = Modifier.padding(vertical = 16.dp)
-                                )
-                            }
-                        } else {
-                            items(
-                                count = lazyPagingItems.itemCount,
-                                key = { index ->
-                                    val song = lazyPagingItems[index]
-                                    song?.id ?: index
+                        when {
+                            // 加载界面
+                            songListUiState.isLoading && songs.isEmpty() -> {
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 32.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        LoadingIndicator(
+                                            color = SaltTheme.colors.highlight
+                                        )
+                                        Text(
+                                            text = "加载中...",
+                                            style = SaltTheme.textStyles.sub,
+                                            color = SaltTheme.colors.subText,
+                                        )
+                                    }
                                 }
-                            ) { index ->
-                                val song = lazyPagingItems[index]
-                                if (song != null) {
+                            }
+
+                            // 空歌单
+                            !songListUiState.isLoading && songs.isEmpty() -> {
+                                item {
+                                    Text(
+                                        text = "暂无歌曲",
+                                        style = SaltTheme.textStyles.sub,
+                                        color = SaltTheme.colors.subText,
+                                        modifier = Modifier.padding(vertical = 16.dp)
+                                    )
+                                }
+                            }
+
+                            else -> {
+                                items(
+                                    items = songs,
+                                    key = { it.id }
+                                ) { song ->
                                     SongItem(
+                                        modifier = Modifier.animateItem(),
                                         song = song,
                                         onMoreClick = {
                                             selectedSongForAction = it
                                             showSongActionDialog = true
                                         },
                                         onClick = { songId ->
-                                            // 把当前已加载的列表项写入对象池，供播放器复用/补全后反哺列表
-                                            viewModel.putSongDetailsToPool(
-                                                lazyPagingItems.itemSnapshotList.items
-                                            )
+                                            // songs 已完整加载，直接传给播放器
+                                            viewModel.putSongsToPool(songs)
 
-                                            val ids = allSongIds.ifEmpty {
-                                                lazyPagingItems.itemSnapshotList.items.map { it.id }
-                                            }
-
-                                            playerViewModel.playTargetSongWithPlaylistSmart(
-                                                targetSongId = songId,
-                                                allSongIds = ids,
+                                            playerViewModel.play(
+                                                songId = songId,
+                                                songList = songs,
+                                                playlistId = playlistId,
                                             )
                                         }
                                     )
-                                } else {
-                                    SongItemPlaceholder()
                                 }
                             }
                         }
@@ -288,8 +303,6 @@ private fun PlaylistHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(SaltTheme.colors.subBackground)
             .padding(12.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
